@@ -1,9 +1,28 @@
 import React, { useEffect, useState, useRef } from "react";
-import { StyleSheet, Text, View, Button, Dimensions, Animated } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Button,
+  Dimensions,
+  Animated,
+  Image,
+  TouchableOpacity,
+  ScrollView,
+  Modal,
+  Platform,
+  PanResponder,
+} from "react-native";
 import { DeviceMotion } from "expo-sensors";
 import { LineChart } from "react-native-chart-kit";
+import * as SplashScreen from "expo-splash-screen";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync();
 
 const screenWidth = Dimensions.get("window").width;
+const windowHeight = Dimensions.get("window").height;
 
 const chartConfig = {
   backgroundGradientFrom: "#fff",
@@ -29,9 +48,201 @@ const chartConfig = {
 
 const MAX_SPEED_DATA_POINTS = 30;
 
+function WelcomeScreen({ visible, onContinue }) {
+  // Animated values for overlay and sheet content
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const contentOpacity = useRef(new Animated.Value(0)).current;
+  const contentTranslateY = useRef(new Animated.Value(40)).current;
+  const panY = useRef(new Animated.Value(0)).current;
+  const [showingModal, setShowingModal] = useState(visible);
+  const [dismissing, setDismissing] = useState(false);
+  const MAX_PULL = 48;
+
+  // PanResponder for bounce effect
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => gestureState.dy > 0,
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          panY.setValue(Math.min(gestureState.dy, MAX_PULL));
+        }
+      },
+      onPanResponderRelease: () => {
+        Animated.spring(panY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 10,
+        }).start();
+      },
+      onPanResponderTerminate: () => {
+        Animated.spring(panY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 10,
+        }).start();
+      },
+    })
+  ).current;
+
+  // Animate overlay and sheet content in/out
+  useEffect(() => {
+    if (visible) {
+      setShowingModal(true);
+      setDismissing(false);
+      overlayOpacity.setValue(0);
+      contentOpacity.setValue(0);
+      contentTranslateY.setValue(40);
+      panY.setValue(0);
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.spring(contentTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 8,
+        }),
+      ]).start();
+    } else if (showingModal) {
+      setDismissing(true);
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentOpacity, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentTranslateY, {
+          toValue: 40,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setDismissing(false);
+        panY.setValue(0);
+        setShowingModal(false);
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  // Dismiss with animation on Continue
+  const handleContinue = () => {
+    setDismissing(true);
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslateY, {
+        toValue: 40,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setDismissing(false);
+      panY.setValue(0);
+      setShowingModal(false);
+      onContinue();
+    });
+  };
+
+  if (!showingModal) return null;
+
+  return (
+    <Modal
+      visible={showingModal}
+      animationType="none"
+      transparent
+      statusBarTranslucent
+    >
+      <Animated.View
+        style={[sheetStyles.overlay, { opacity: overlayOpacity }]}
+        pointerEvents={dismissing ? "none" : "auto"}
+      />
+      <View style={sheetStyles.sheet}>
+        <Animated.View
+          style={{
+            opacity: contentOpacity,
+            transform: [{ translateY: Animated.add(contentTranslateY, panY) }],
+            width: "100%",
+          }}
+          {...panResponder.panHandlers}
+        >
+          <ScrollView
+            contentContainerStyle={{ alignItems: "center", paddingBottom: 24 }}
+            bounces={true}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={sheetStyles.iconContainer}>
+              <Image
+                source={require("./assets/icon.png")}
+                style={sheetStyles.icon}
+              />
+            </View>
+            <Text style={sheetStyles.title}>Welcome to MyApp</Text>
+            <Text style={sheetStyles.subtitle}>
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce 
+              varius, sapien nec ullamcorper gravida, turpis nunc blandit arcu, 
+              eu fermentum risus nulla.
+            </Text>
+            <View style={sheetStyles.peopleContainer}>
+              <Image
+                source={require("./assets/icon.png")}
+                style={sheetStyles.peopleIcon}
+              />
+            </View>
+            <Text style={sheetStyles.privacy}>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+            Integer cursus nunc nec pulvinar lacinia. Velit sapien 
+            bibendum magna vitae rutrum. Felis turpis sed curabitur 
+            accumsan nisi in commodo luctus. Urna justo fermentum 
+            sapien non blandit sem. Urna ut ante maecenas auctor 
+            eros eget odio commodo.{" "}
+              <Text style={{ color: "#007aff" }}>
+                Sed dapibus risus hendrerit vitae mollis augue…
+              </Text>
+            </Text>
+            <TouchableOpacity
+              style={sheetStyles.button}
+              onPress={handleContinue}
+            >
+              <Text style={sheetStyles.buttonText}>Continue</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function App() {
+  const [appIsReady, setAppIsReady] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [mode, setMode] = useState("motion");
-  const [motionData, setMotionData] = useState({ acceleration: {}, accelerationIncludingGravity: {}, rotation: {}, orientation: null });
+  const [motionData, setMotionData] = useState({
+    acceleration: {},
+    accelerationIncludingGravity: {},
+    rotation: {},
+    orientation: null,
+  });
   const [obd2Data, setObd2Data] = useState({ speed: 0, rpm: 0, throttle: 0 });
   const [speedHistory, setSpeedHistory] = useState([0]);
   const [currentAcceleration, setCurrentAcceleration] = useState(0);
@@ -39,9 +250,36 @@ export default function App() {
   const chartAnimationValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    async function prepare() {
+      try {
+        // Pre-load fonts, make any API calls you need to do here
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate loading time
+        const hasSeenWelcome = await AsyncStorage.getItem("hasSeenWelcome");
+        setShowWelcome(!hasSeenWelcome);
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        // Tell the application to render
+        setAppIsReady(true);
+      }
+    }
+
+    prepare();
+  }, []);
+
+  useEffect(() => {
+    if (appIsReady) {
+      // Hide splash screen once the app is ready
+      SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  useEffect(() => {
     if (mode === "motion") {
       DeviceMotion.setUpdateInterval(100);
-      const subscription = DeviceMotion.addListener(data => setMotionData(data));
+      const subscription = DeviceMotion.addListener((data) =>
+        setMotionData(data)
+      );
       return () => subscription.remove();
     }
   }, [mode]);
@@ -62,15 +300,21 @@ export default function App() {
 
       interval = setInterval(() => {
         const newSpeed = Math.random() * 120;
-        setObd2Data({ speed: newSpeed, rpm: Math.random() * 8000, throttle: Math.random() * 100 });
+        setObd2Data({
+          speed: newSpeed,
+          rpm: Math.random() * 8000,
+          throttle: Math.random() * 100,
+        });
         const accelerationValue = newSpeed - previousSpeedRef.current;
         setCurrentAcceleration(accelerationValue);
 
         newSpeedHistory.push(newSpeed);
 
-        setSpeedHistory(prevHistory => {
+        setSpeedHistory((prevHistory) => {
           const updatedHistory = [...prevHistory, newSpeed];
-          return updatedHistory.length > MAX_SPEED_DATA_POINTS ? updatedHistory.slice(-MAX_SPEED_DATA_POINTS) : updatedHistory;
+          return updatedHistory.length > MAX_SPEED_DATA_POINTS
+            ? updatedHistory.slice(-MAX_SPEED_DATA_POINTS)
+            : updatedHistory;
         });
         previousSpeedRef.current = newSpeed;
       }, 250);
@@ -87,19 +331,37 @@ export default function App() {
     }
   }, [mode]);
 
-  const { acceleration, accelerationIncludingGravity, rotation, orientation } = motionData;
+  const { acceleration, accelerationIncludingGravity, rotation, orientation } =
+    motionData;
 
   const speedChartData = {
     labels: [],
-    datasets: [{
-      data: speedHistory.length > 0 ? speedHistory : [0],
-      color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
-      strokeWidth: 2,
-    }],
+    datasets: [
+      {
+        data: speedHistory.length > 0 ? speedHistory : [0],
+        color: (opacity = 1) => `rgba(0, 122, 255, ${opacity})`,
+        strokeWidth: 2,
+      },
+    ],
   };
+
+  const handleContinue = async () => {
+    await AsyncStorage.setItem("hasSeenWelcome", "true");
+    setShowWelcome(false);
+  };
+
+  const handleResetSplash = async () => {
+    await AsyncStorage.removeItem("hasSeenWelcome");
+    setShowWelcome(true);
+  };
+
+  if (!appIsReady) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
+      <WelcomeScreen visible={showWelcome} onContinue={handleContinue} />
       <View style={styles.buttonContainer}>
         <Button title="Device Motion" onPress={() => setMode("motion")} />
         <Button title="Live" onPress={() => setMode("live")} />
@@ -114,14 +376,23 @@ export default function App() {
           <Text style={styles.value}>y: {acceleration?.y?.toFixed(2)}</Text>
           <Text style={styles.value}>z: {acceleration?.z?.toFixed(2)}</Text>
           <Text style={styles.label}>Acceleration (with gravity):</Text>
-          <Text style={styles.value}>x: {accelerationIncludingGravity?.x?.toFixed(2)}</Text>
-          <Text style={styles.value}>y: {accelerationIncludingGravity?.y?.toFixed(2)}</Text>
-          <Text style={styles.value}>z: {accelerationIncludingGravity?.z?.toFixed(2)}</Text>
+          <Text style={styles.value}>
+            x: {accelerationIncludingGravity?.x?.toFixed(2)}
+          </Text>
+          <Text style={styles.value}>
+            y: {accelerationIncludingGravity?.y?.toFixed(2)}
+          </Text>
+          <Text style={styles.value}>
+            z: {accelerationIncludingGravity?.z?.toFixed(2)}
+          </Text>
           <Text style={styles.label}>Rotation (radians):</Text>
           <Text style={styles.value}>α: {rotation?.alpha?.toFixed(2)}</Text>
           <Text style={styles.value}>β: {rotation?.beta?.toFixed(2)}</Text>
           <Text style={styles.value}>γ: {rotation?.gamma?.toFixed(2)}</Text>
-          <Text style={styles.label}>Orientation: {orientation === null ? 'null' : orientation.toFixed(0)}</Text>
+          <Text style={styles.label}>
+            Orientation:{" "}
+            {orientation === null ? "null" : orientation.toFixed(0)}
+          </Text>
         </View>
       )}
 
@@ -130,9 +401,13 @@ export default function App() {
       {mode === "sim" && (
         <View style={styles.dataContainer}>
           <Text style={styles.heading}>Simulated OBD2 Data</Text>
-          <Text style={styles.value}>Speed: {Math.round(obd2Data.speed)} mph</Text>
+          <Text style={styles.value}>
+            Speed: {Math.round(obd2Data.speed)} mph
+          </Text>
           <Text style={styles.value}>RPM: {Math.round(obd2Data.rpm)}</Text>
-          <Text style={styles.value}>Throttle: {obd2Data.throttle.toFixed(1)} %</Text>
+          <Text style={styles.value}>
+            Throttle: {obd2Data.throttle.toFixed(1)} %
+          </Text>
 
           <Text style={styles.subHeading}>Vehicle Speed Over Time</Text>
           <LineChart
@@ -148,9 +423,20 @@ export default function App() {
           />
 
           <Text style={styles.label}>Current Acceleration:</Text>
-          <Text style={styles.value}>{currentAcceleration.toFixed(2)} mph/s</Text>
+          <Text style={styles.value}>
+            {currentAcceleration.toFixed(2)} mph/s
+          </Text>
         </View>
       )}
+
+      <View style={resetStyles.resetButtonContainer}>
+        <TouchableOpacity
+          style={resetStyles.resetButton}
+          onPress={handleResetSplash}
+        >
+          <Text style={resetStyles.resetButtonText}>Reset Splash Status</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -171,12 +457,12 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   dataContainer: {
-    width: '90%',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    width: "90%",
+    alignItems: "center",
+    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -187,32 +473,148 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 15,
-    textAlign: 'center',
-    color: '#333',
+    textAlign: "center",
+    color: "#333",
   },
   subHeading: {
     fontSize: 18,
     fontWeight: "600",
     marginTop: 20,
     marginBottom: 10,
-    textAlign: 'center',
-    color: '#555',
+    textAlign: "center",
+    color: "#555",
   },
   label: {
     marginTop: 10,
     fontSize: 16,
     fontWeight: "500",
-    textAlign: 'center',
-    color: '#333',
+    textAlign: "center",
+    color: "#333",
   },
   value: {
     fontSize: 15,
     marginBottom: 5,
-    textAlign: 'center',
-    color: '#666',
+    textAlign: "center",
+    color: "#666",
   },
   chartStyle: {
     marginVertical: 10,
     borderRadius: 8,
+  },
+});
+
+const sheetStyles = StyleSheet.create({
+  overlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    zIndex: 1,
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 28,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    minHeight: 500,
+    width: "100%",
+    zIndex: 2,
+  },
+  iconContainer: {
+    backgroundColor: "#007aff",
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 24,
+    marginTop: 8,
+  },
+  icon: {
+    width: 64,
+    height: 64,
+    tintColor: "white",
+    resizeMode: "contain",
+  },
+  title: {
+    color: "#222",
+    fontSize: 28,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 16,
+  },
+  subtitle: {
+    color: "#222",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  peopleContainer: {
+    marginBottom: 12,
+    marginTop: 8,
+    alignItems: "center",
+  },
+  peopleIcon: {
+    width: 32,
+    height: 32,
+    tintColor: "#007aff",
+    resizeMode: "contain",
+  },
+  privacy: {
+    color: "#888",
+    fontSize: 12,
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 16,
+  },
+  button: {
+    backgroundColor: "#007aff",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignItems: "center",
+    marginBottom: 16,
+    marginTop: 8,
+    width: "100%",
+    maxWidth: 320,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+});
+
+const resetStyles = StyleSheet.create({
+  resetButtonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 32,
+    backgroundColor: "transparent",
+  },
+  resetButton: {
+    backgroundColor: "#ff375f",
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    alignItems: "center",
+    width: "90%",
+    maxWidth: 320,
+  },
+  resetButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
