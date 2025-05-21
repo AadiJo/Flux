@@ -3,7 +3,7 @@ import { StyleSheet, View, Button, TouchableOpacity, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import WelcomeScreen from "./components/WelcomeScreen";
+import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
 import { MotionScreen } from "./screens/MotionScreen";
 import { LiveScreen } from "./screens/LiveScreen";
