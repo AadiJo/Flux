@@ -12,11 +12,17 @@ import {
   Modal,
   Platform,
   PanResponder,
+  Linking,
+  ActivityIndicator,
+  Alert,
+  TextInput,
 } from "react-native";
 import { DeviceMotion } from "expo-sensors";
 import { LineChart } from "react-native-chart-kit";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
+import WifiManager from "react-native-wifi-reborn";
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -199,8 +205,8 @@ function WelcomeScreen({ visible, onContinue }) {
             </View>
             <Text style={sheetStyles.title}>Welcome to MyApp</Text>
             <Text style={sheetStyles.subtitle}>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce 
-              varius, sapien nec ullamcorper gravida, turpis nunc blandit arcu, 
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce
+              varius, sapien nec ullamcorper gravida, turpis nunc blandit arcu,
               eu fermentum risus nulla.
             </Text>
             <View style={sheetStyles.peopleContainer}>
@@ -210,12 +216,11 @@ function WelcomeScreen({ visible, onContinue }) {
               />
             </View>
             <Text style={sheetStyles.privacy}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-            Integer cursus nunc nec pulvinar lacinia. Velit sapien 
-            bibendum magna vitae rutrum. Felis turpis sed curabitur 
-            accumsan nisi in commodo luctus. Urna justo fermentum 
-            sapien non blandit sem. Urna ut ante maecenas auctor 
-            eros eget odio commodo.{" "}
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+              cursus nunc nec pulvinar lacinia. Velit sapien bibendum magna
+              vitae rutrum. Felis turpis sed curabitur accumsan nisi in commodo
+              luctus. Urna justo fermentum sapien non blandit sem. Urna ut ante
+              maecenas auctor eros eget odio commodo.{" "}
               <Text style={{ color: "#007aff" }}>
                 Sed dapibus risus hendrerit vitae mollis augue…
               </Text>
@@ -227,6 +232,355 @@ function WelcomeScreen({ visible, onContinue }) {
               <Text style={sheetStyles.buttonText}>Continue</Text>
             </TouchableOpacity>
           </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function WifiSelectionModal({ visible, onClose, onSelectNetwork }) {
+  const [networks, setNetworks] = useState([]);
+  const [scanning, setScanning] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState(null);
+  const [password, setPassword] = useState("");
+  const [showPasswordInput, setShowPasswordInput] = useState(false);
+  const [showingModal, setShowingModal] = useState(visible);
+  const [dismissing, setDismissing] = useState(false);
+
+  // Animated values for overlay and sheet content
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const contentTranslateY = useRef(new Animated.Value(40)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setShowingModal(true);
+      setDismissing(false);
+      overlayOpacity.setValue(0);
+      contentTranslateY.setValue(40);
+
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.spring(contentTranslateY, {
+          toValue: 0,
+          useNativeDriver: true,
+          bounciness: 8,
+        }),
+      ]).start();
+
+      scanNetworks();
+    } else if (showingModal) {
+      setDismissing(true);
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentTranslateY, {
+          toValue: 40,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setDismissing(false);
+        setShowingModal(false);
+      });
+    }
+  }, [visible]);
+
+  const handleClose = () => {
+    setDismissing(true);
+    Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(contentTranslateY, {
+        toValue: 40,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setDismissing(false);
+      setShowingModal(false);
+      onClose();
+    });
+  };
+
+  const scanNetworks = async () => {
+    try {
+      setScanning(true);
+
+      if (Platform.OS === "android") {
+        // Close the modal first
+        handleClose();
+        // Small delay to ensure modal is closed before showing alert
+        setTimeout(() => {
+          Alert.alert(
+            "Connect to WiFi",
+            "To retrieve data from your OBD connector, please connect to its network.",
+            [
+              {
+                text: "Open Settings",
+                onPress: () => {
+                  Linking.openSettings();
+                },
+              },
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+            ]
+          );
+        }, 300);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to open settings: " + error.message, [
+        { text: "OK" },
+      ]);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleNetworkSelect = async (network) => {
+    if (Platform.OS === "ios") {
+      Linking.openURL("App-Prefs:root=WIFI");
+      return;
+    }
+
+    if (network.isCurrent) {
+      Alert.alert(
+        "Already Connected",
+        `You are already connected to ${network.ssid}`
+      );
+      return;
+    }
+
+    if (network.secured) {
+      setSelectedNetwork(network);
+      setShowPasswordInput(true);
+    } else {
+      try {
+        await WifiManager.connectToSSID(network.ssid);
+        onSelectNetwork(network);
+      } catch (error) {
+        Alert.alert(
+          "Connection Failed",
+          `Failed to connect to ${network.ssid}: ${error.message}`,
+          [{ text: "OK" }]
+        );
+      }
+    }
+  };
+
+  const handleConnect = async () => {
+    if (Platform.OS === "ios") {
+      Linking.openURL("App-Prefs:root=WIFI");
+      return;
+    }
+
+    if (!selectedNetwork || !password) return;
+
+    try {
+      await WifiManager.connectToProtectedSSID(
+        selectedNetwork.ssid,
+        password,
+        selectedNetwork.capabilities.includes("WPA")
+      );
+      onSelectNetwork(selectedNetwork);
+      setShowPasswordInput(false);
+      setPassword("");
+    } catch (error) {
+      Alert.alert(
+        "Connection Failed",
+        `Failed to connect to ${selectedNetwork.ssid}: ${error.message}`,
+        [{ text: "OK" }]
+      );
+    }
+  };
+
+  // On iOS, show a simplified interface
+  if (Platform.OS === "ios") {
+    return (
+      <Modal
+        visible={showingModal}
+        animationType="none"
+        transparent={true}
+        onRequestClose={handleClose}
+        statusBarTranslucent={true}
+      >
+        <Animated.View
+          style={[styles.modalOverlay, { opacity: overlayOpacity }]}
+          pointerEvents={dismissing ? "none" : "auto"}
+        />
+        <View style={styles.modalSheet}>
+          <Animated.View
+            style={{
+              transform: [{ translateY: contentTranslateY }],
+              width: "100%",
+            }}
+          >
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>WiFi Settings</Text>
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeButton}
+                >
+                  <Ionicons name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.iosMessageContainer}>
+                <Ionicons name="wifi" size={48} color="#007aff" />
+                <Text style={styles.iosMessageTitle}>Connect to WiFi</Text>
+                <Text style={styles.iosMessageText}>
+                  To retrieve data from your OBD connector, please connect to
+                  its network.
+                </Text>
+                <TouchableOpacity
+                  style={styles.iosSettingsButton}
+                  onPress={() => {
+                    Linking.openURL("App-Prefs:root=WIFI");
+                    handleClose();
+                  }}
+                >
+                  <Text style={styles.iosSettingsButtonText}>
+                    Open Settings
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Android interface
+  return (
+    <Modal
+      visible={showingModal}
+      animationType="none"
+      transparent={true}
+      onRequestClose={handleClose}
+      statusBarTranslucent={true}
+    >
+      <Animated.View
+        style={[styles.modalOverlay, { opacity: overlayOpacity }]}
+        pointerEvents={dismissing ? "none" : "auto"}
+      />
+      <View style={styles.modalSheet}>
+        <Animated.View
+          style={{
+            transform: [{ translateY: contentTranslateY }],
+            width: "100%",
+          }}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Retrieve Data</Text>
+              <TouchableOpacity
+                onPress={handleClose}
+                style={styles.closeButton}
+              >
+                <Ionicons name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity style={styles.scanButton} onPress={scanNetworks}>
+              <Ionicons name="refresh" size={20} color="#007aff" />
+              <Text style={styles.scanButtonText}>Scan for Networks</Text>
+            </TouchableOpacity>
+
+            {showPasswordInput ? (
+              <View style={styles.passwordContainer}>
+                <Text style={styles.passwordTitle}>
+                  Enter password for {selectedNetwork.ssid}
+                </Text>
+                <TextInput
+                  style={styles.passwordInput}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                />
+                <View style={styles.passwordButtons}>
+                  <TouchableOpacity
+                    style={[styles.passwordButton, styles.cancelButton]}
+                    onPress={() => {
+                      setShowPasswordInput(false);
+                      setPassword("");
+                      setSelectedNetwork(null);
+                    }}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.passwordButton, styles.connectButton]}
+                    onPress={handleConnect}
+                  >
+                    <Text style={styles.connectButtonText}>Connect</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <>
+                {scanning ? (
+                  <View style={styles.scanningContainer}>
+                    <ActivityIndicator size="large" color="#007aff" />
+                    <Text style={styles.scanningText}>
+                      Scanning for networks...
+                    </Text>
+                  </View>
+                ) : (
+                  <ScrollView style={styles.networkList}>
+                    {networks.map((network, index) => (
+                      <TouchableOpacity
+                        key={index}
+                        style={[
+                          styles.networkItem,
+                          network.isCurrent && styles.currentNetwork,
+                        ]}
+                        onPress={() => handleNetworkSelect(network)}
+                      >
+                        <View style={styles.networkInfo}>
+                          <Text style={styles.networkName}>
+                            {network.ssid}
+                            {network.isCurrent && " (Connected)"}
+                          </Text>
+                          <View style={styles.networkDetails}>
+                            <Ionicons
+                              name={
+                                network.secured ? "lock-closed" : "lock-open"
+                              }
+                              size={16}
+                              color="#666"
+                            />
+                            <Text style={styles.networkStrength}>
+                              {Array(network.strength).fill("•").join("")}
+                            </Text>
+                          </View>
+                        </View>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#666"
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </>
+            )}
+          </View>
         </Animated.View>
       </View>
     </Modal>
@@ -248,6 +602,8 @@ export default function App() {
   const [currentAcceleration, setCurrentAcceleration] = useState(0);
   const previousSpeedRef = useRef(0);
   const chartAnimationValue = useRef(new Animated.Value(0)).current;
+  const [showWifiModal, setShowWifiModal] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState(null);
 
   useEffect(() => {
     async function prepare() {
@@ -355,6 +711,26 @@ export default function App() {
     setShowWelcome(true);
   };
 
+  const openWifiSettings = async () => {
+    if (Platform.OS === "ios") {
+      await Linking.openURL("App-Prefs:root=WIFI");
+    } else {
+      await Linking.openSettings();
+    }
+  };
+
+  const handleWifiSelect = (network) => {
+    setSelectedNetwork(network);
+    setShowWifiModal(false);
+    // Here you would typically handle the actual WiFi connection
+    // For now, we'll just show an alert
+    Alert.alert(
+      "Connecting to WiFi",
+      `Attempting to connect to ${network.ssid}...`,
+      [{ text: "OK" }]
+    );
+  };
+
   if (!appIsReady) {
     return null;
   }
@@ -396,7 +772,23 @@ export default function App() {
         </View>
       )}
 
-      {mode === "live" && <Text style={styles.value}>Real time data</Text>}
+      {mode === "live" && (
+        <View style={styles.dataContainer}>
+          <Text style={styles.heading}>Live Data</Text>
+          <TouchableOpacity
+            style={styles.wifiButton}
+            onPress={() => setShowWifiModal(true)}
+          >
+            <Ionicons name="wifi" size={24} color="#007aff" />
+            <Text style={styles.wifiButtonText}>
+              {selectedNetwork
+                ? `Connected to ${selectedNetwork.ssid}`
+                : "Retrieve Data"}
+            </Text>
+          </TouchableOpacity>
+          <Text style={styles.value}>Real time data</Text>
+        </View>
+      )}
 
       {mode === "sim" && (
         <View style={styles.dataContainer}>
@@ -437,6 +829,12 @@ export default function App() {
           <Text style={resetStyles.resetButtonText}>Reset Splash Status</Text>
         </TouchableOpacity>
       </View>
+
+      <WifiSelectionModal
+        visible={showWifiModal}
+        onClose={() => setShowWifiModal(false)}
+        onSelectNetwork={handleWifiSelect}
+      />
     </View>
   );
 }
@@ -500,6 +898,186 @@ const styles = StyleSheet.create({
   chartStyle: {
     marginVertical: 10,
     borderRadius: 8,
+  },
+  wifiButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  wifiButtonText: {
+    marginLeft: 8,
+    color: "#007aff",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalSheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "white",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: "80%",
+    marginTop: Platform.OS === "ios" ? 40 : 0,
+    overflow: "hidden",
+  },
+  modalContent: {
+    width: "100%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  closeButton: {
+    padding: 5,
+  },
+  scanButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f0f0f0",
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  scanButtonText: {
+    marginLeft: 8,
+    color: "#007aff",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  scanningContainer: {
+    alignItems: "center",
+    padding: 20,
+  },
+  scanningText: {
+    marginTop: 10,
+    color: "#666",
+    fontSize: 16,
+  },
+  networkList: {
+    maxHeight: 400,
+  },
+  networkItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  networkInfo: {
+    flex: 1,
+  },
+  networkName: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 4,
+  },
+  networkDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  networkStrength: {
+    marginLeft: 8,
+    color: "#666",
+    fontSize: 16,
+  },
+  currentNetwork: {
+    backgroundColor: "#f0f8ff",
+  },
+  passwordContainer: {
+    padding: 20,
+  },
+  passwordTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    marginBottom: 15,
+    color: "#333",
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 15,
+  },
+  passwordButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  passwordButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#f0f0f0",
+    marginRight: 8,
+  },
+  connectButton: {
+    backgroundColor: "#007aff",
+    marginLeft: 8,
+  },
+  cancelButtonText: {
+    color: "#666",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  connectButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  iosMessageContainer: {
+    alignItems: "center",
+    padding: 20,
+  },
+  iosMessageTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  iosMessageText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 24,
+  },
+  iosSettingsButton: {
+    backgroundColor: "#007aff",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  iosSettingsButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 
