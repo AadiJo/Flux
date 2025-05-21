@@ -3,12 +3,12 @@ import { StyleSheet, View, Button, TouchableOpacity, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import WelcomeScreen from "./src/components/WelcomeScreen";
-import WifiSelectionModal from "./src/components/WifiSelectionModal";
-import { MotionScreen } from "./src/screens/MotionScreen";
-import { LiveScreen } from "./src/screens/LiveScreen";
-import { SimulationScreen } from "./src/screens/SimulationScreen";
-import { useWifiConnection } from "./src/hooks/useWifiConnection";
+import WelcomeScreen from "./components/WelcomeScreen";
+import WifiSelectionModal from "./components/WifiSelectionModal";
+import { MotionScreen } from "./screens/MotionScreen";
+import { LiveScreen } from "./screens/LiveScreen";
+import { SimulationScreen } from "./screens/SimulationScreen";
+import { useWifiConnection } from "./hooks/useWifiConnection";
 
 // Keep the splash screen visible while fetching resources
 SplashScreen.preventAutoHideAsync();
