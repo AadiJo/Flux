@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyApp",
-    "slug": "MyApp",
+    "name": "OBApp",
+    "slug": "OBApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
