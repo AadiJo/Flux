@@ -3,10 +3,12 @@ import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 
 import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
 import { AlertBanner } from "./components/AlertBanner";
+import { HomeScreen } from "./screens/HomeScreen";
 import { MotionScreen } from "./screens/MotionScreen";
 import { LiveScreen } from "./screens/LiveScreen";
 import { SimulationScreen } from "./screens/SimulationScreen";
@@ -16,10 +18,11 @@ import { useAlertBanner } from "./hooks/useAlertBanner";
 // Keep the splash screen visible while fetching resources
 SplashScreen.preventAutoHideAsync();
 
-export default function App() {
+const AppContent = () => {
+  const { theme } = useTheme();
   const [isAppReady, setIsAppReady] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
-  const [selectedMode, setSelectedMode] = useState("motion");
+  const [selectedMode, setSelectedMode] = useState("home");
   const { isVisible, showBanner } = useAlertBanner();
   const {
     selectedNetwork,
@@ -73,11 +76,14 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <AlertBanner visible={isVisible} />
       <WelcomeScreen visible={hasSeenWelcome} onContinue={handleContinue} />
 
-      <View style={styles.contentContainer}>
+      <View
+        style={[styles.contentContainer, { backgroundColor: theme.background }]}
+      >
+        {selectedMode === "home" && <HomeScreen />}
         {selectedMode === "motion" && (
           <MotionScreen onResetSplash={handleResetSplash} />
         )}
@@ -93,7 +99,39 @@ export default function App() {
         )}
       </View>
 
-      <View style={styles.navbar}>
+      <View
+        style={[
+          styles.navbar,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => setSelectedMode("home")}
+        >
+          <MaterialCommunityIcons
+            name="home"
+            size={24}
+            color={
+              selectedMode === "home" ? theme.primary : theme.textSecondary
+            }
+          />
+          <Text
+            style={[
+              styles.navText,
+              {
+                color:
+                  selectedMode === "home" ? theme.primary : theme.textSecondary,
+              },
+            ]}
+          >
+            Home
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => setSelectedMode("motion")}
@@ -101,12 +139,19 @@ export default function App() {
           <MaterialCommunityIcons
             name="motion-sensor"
             size={24}
-            color={selectedMode === "motion" ? "#007AFF" : "#666"}
+            color={
+              selectedMode === "motion" ? theme.primary : theme.textSecondary
+            }
           />
           <Text
             style={[
               styles.navText,
-              selectedMode === "motion" && styles.activeNavText,
+              {
+                color:
+                  selectedMode === "motion"
+                    ? theme.primary
+                    : theme.textSecondary,
+              },
             ]}
           >
             Motion
@@ -120,12 +165,17 @@ export default function App() {
           <MaterialCommunityIcons
             name="connection"
             size={24}
-            color={selectedMode === "live" ? "#007AFF" : "#666"}
+            color={
+              selectedMode === "live" ? theme.primary : theme.textSecondary
+            }
           />
           <Text
             style={[
               styles.navText,
-              selectedMode === "live" && styles.activeNavText,
+              {
+                color:
+                  selectedMode === "live" ? theme.primary : theme.textSecondary,
+              },
             ]}
           >
             Live
@@ -139,12 +189,21 @@ export default function App() {
           <MaterialCommunityIcons
             name="desktop-classic"
             size={24}
-            color={selectedMode === "simulation" ? "#007AFF" : "#666"}
+            color={
+              selectedMode === "simulation"
+                ? theme.primary
+                : theme.textSecondary
+            }
           />
           <Text
             style={[
               styles.navText,
-              selectedMode === "simulation" && styles.activeNavText,
+              {
+                color:
+                  selectedMode === "simulation"
+                    ? theme.primary
+                    : theme.textSecondary,
+              },
             ]}
           >
             Simulation
@@ -158,6 +217,14 @@ export default function App() {
         onSelectNetwork={handleWifiSelect}
       />
     </View>
+  );
+};
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }
 

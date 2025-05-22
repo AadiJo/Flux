@@ -11,10 +11,12 @@ import {
   PanResponder,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTheme } from "../contexts/ThemeContext";
 
 const MAX_PULL = 48;
 
 export default function WelcomeScreen({ visible, onContinue }) {
+  const { theme } = useTheme();
   // Animated values for overlay and sheet content
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
@@ -141,7 +143,15 @@ export default function WelcomeScreen({ visible, onContinue }) {
         style={[styles.overlay, { opacity: overlayOpacity }]}
         pointerEvents={dismissing ? "none" : "auto"}
       />
-      <View style={styles.sheet}>
+      <View
+        style={[
+          styles.sheet,
+          {
+            backgroundColor: theme.card,
+            shadowColor: theme.shadow,
+          },
+        ]}
+      >
         <Animated.View
           style={{
             opacity: contentOpacity,
@@ -155,11 +165,15 @@ export default function WelcomeScreen({ visible, onContinue }) {
             bounces={true}
             showsVerticalScrollIndicator={false}
           >
-            <View style={styles.iconContainer}>
+            <View
+              style={[styles.iconContainer, { backgroundColor: theme.primary }]}
+            >
               <MaterialCommunityIcons name="car" size={64} color="white" />
             </View>
-            <Text style={styles.title}>Welcome to OBDApp</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: theme.text }]}>
+              Welcome to OBDApp
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.text }]}>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce
               varius, sapien nec ullamcorper gravida, turpis nunc blandit arcu,
               eu fermentum risus nulla.
@@ -168,20 +182,23 @@ export default function WelcomeScreen({ visible, onContinue }) {
               <MaterialCommunityIcons
                 name="car-connected"
                 size={32}
-                color="#007aff"
+                color={theme.primary}
               />
             </View>
-            <Text style={styles.privacy}>
+            <Text style={[styles.privacy, { color: theme.textSecondary }]}>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
               cursus nunc nec pulvinar lacinia. Velit sapien bibendum magna
               vitae rutrum. Felis turpis sed curabitur accumsan nisi in commodo
               luctus. Urna justo fermentum sapien non blandit sem. Urna ut ante
               maecenas auctor eros eget odio commodo.{" "}
-              <Text style={{ color: "#007aff" }}>
+              <Text style={{ color: theme.primary }}>
                 Sed dapibus risus hendrerit vitae mollis augue…
               </Text>
             </Text>
-            <TouchableOpacity style={styles.button} onPress={handleContinue}>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: theme.primary }]}
+              onPress={handleContinue}
+            >
               <Text style={styles.buttonText}>Continue</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -206,12 +223,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "#fff",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 28,
     alignItems: "center",
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
@@ -221,7 +236,6 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   iconContainer: {
-    backgroundColor: "#007aff",
     borderRadius: 24,
     padding: 24,
     marginBottom: 24,
@@ -234,14 +248,12 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   title: {
-    color: "#222",
     fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 16,
   },
   subtitle: {
-    color: "#222",
     fontSize: 16,
     textAlign: "center",
     marginBottom: 32,
@@ -259,14 +271,12 @@ const styles = StyleSheet.create({
     resizeMode: "contain",
   },
   privacy: {
-    color: "#888",
     fontSize: 12,
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 16,
   },
   button: {
-    backgroundColor: "#007aff",
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 40,

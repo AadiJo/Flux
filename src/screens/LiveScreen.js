@@ -1,32 +1,65 @@
 import React from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useTheme } from "../contexts/ThemeContext";
 
 export const LiveScreen = ({
   onOpenWifiModal,
   selectedNetwork,
   onResetSplash,
 }) => {
+  const { theme } = useTheme();
+
   return (
-    <View style={styles.container}>
-      <TouchableOpacity
-        style={styles.refreshButton}
-        onPress={onResetSplash}
-        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.background }]}>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <TouchableOpacity style={styles.headerButton} onPress={onResetSplash}>
+            <MaterialCommunityIcons
+              name="refresh"
+              size={24}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+      <View
+        style={[
+          styles.dataContainer,
+          {
+            backgroundColor: theme.card,
+            shadowColor: theme.shadow,
+            borderColor: theme.border,
+          },
+        ]}
       >
-        <Ionicons name="refresh" size={24} color="#007aff" />
-      </TouchableOpacity>
-      <View style={styles.dataContainer}>
-        <Text style={styles.heading}>Live Data</Text>
-        <TouchableOpacity style={styles.wifiButton} onPress={onOpenWifiModal}>
-          <Ionicons name="wifi" size={24} color="#007aff" />
-          <Text style={styles.wifiButtonText}>
+        <Text style={[styles.heading, { color: theme.text }]}>Live Data</Text>
+        <TouchableOpacity
+          style={[
+            styles.wifiButton,
+            {
+              backgroundColor: theme.isDark
+                ? "rgba(255, 255, 255, 0.15)"
+                : "rgba(0, 0, 0, 0.08)",
+              shadowColor: theme.shadow,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 2,
+              elevation: 2,
+            },
+          ]}
+          onPress={onOpenWifiModal}
+        >
+          <Ionicons name="wifi" size={24} color={theme.primary} />
+          <Text style={[styles.wifiButtonText, { color: theme.primary }]}>
             {selectedNetwork
               ? `Connected to ${selectedNetwork.ssid}`
               : "Retrieve Data"}
           </Text>
         </TouchableOpacity>
-        <Text style={styles.value}>Real time data</Text>
+        <Text style={[styles.value, { color: theme.textSecondary }]}>
+          Real time data
+        </Text>
       </View>
     </View>
   );
@@ -36,57 +69,59 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
+    backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    position: "relative",
   },
-  refreshButton: {
+  header: {
     position: "absolute",
-    top: 10,
-    left: 20,
-    zIndex: 1,
-    padding: 12,
-    backgroundColor: "rgba(255,255,255,0.9)",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 30,
+    paddingBottom: 8,
+    backgroundColor: "#fff",
+  },
+  headerButton: {
+    padding: 8,
     borderRadius: 20,
   },
   dataContainer: {
     width: "90%",
     alignItems: "center",
-    backgroundColor: "#fff",
     padding: 20,
     borderRadius: 10,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 1,
     maxWidth: 600,
-    marginTop: 0,
+    borderWidth: 1,
   },
   heading: {
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 15,
     textAlign: "center",
-    color: "#333",
   },
   value: {
     fontSize: 15,
     marginBottom: 5,
     textAlign: "center",
-    color: "#666",
   },
   wifiButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f0f0",
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
   },
   wifiButtonText: {
     marginLeft: 8,
-    color: "#007aff",
     fontSize: 16,
     fontWeight: "500",
   },

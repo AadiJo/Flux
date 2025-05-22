@@ -14,12 +14,14 @@ import {
   Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../contexts/ThemeContext";
 
 export default function WifiSelectionModal({
   visible,
   onClose,
   onSelectNetwork,
 }) {
+  const { theme } = useTheme();
   const [scanning, setScanning] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState(null);
   const [password, setPassword] = useState("");
@@ -142,7 +144,15 @@ export default function WifiSelectionModal({
           style={[styles.modalOverlay, { opacity: overlayOpacity }]}
           pointerEvents={dismissing ? "none" : "auto"}
         />
-        <View style={styles.modalSheet}>
+        <View
+          style={[
+            styles.modalSheet,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
           <Animated.View
             style={{
               transform: [{ translateY: contentTranslateY }],
@@ -151,24 +161,40 @@ export default function WifiSelectionModal({
           >
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>WiFi Settings</Text>
+                <Text style={[styles.modalTitle, { color: theme.text }]}>
+                  WiFi Settings
+                </Text>
                 <TouchableOpacity
                   onPress={handleClose}
                   style={styles.closeButton}
                 >
-                  <Ionicons name="close" size={24} color="#666" />
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color={theme.textSecondary}
+                  />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.iosMessageContainer}>
-                <Ionicons name="wifi" size={48} color="#007aff" />
-                <Text style={styles.iosMessageTitle}>Connect to WiFi</Text>
-                <Text style={styles.iosMessageText}>
+                <Ionicons name="wifi" size={48} color={theme.primary} />
+                <Text style={[styles.iosMessageTitle, { color: theme.text }]}>
+                  Connect to WiFi
+                </Text>
+                <Text
+                  style={[
+                    styles.iosMessageText,
+                    { color: theme.textSecondary },
+                  ]}
+                >
                   To retrieve data from your OBD connector, please connect to
                   its network.
                 </Text>
                 <TouchableOpacity
-                  style={styles.iosSettingsButton}
+                  style={[
+                    styles.iosSettingsButton,
+                    { backgroundColor: theme.primary },
+                  ]}
                   onPress={() => {
                     Linking.openURL("App-Prefs:root=WIFI");
                     handleClose();
@@ -199,7 +225,15 @@ export default function WifiSelectionModal({
         style={[styles.modalOverlay, { opacity: overlayOpacity }]}
         pointerEvents={dismissing ? "none" : "auto"}
       />
-      <View style={styles.modalSheet}>
+      <View
+        style={[
+          styles.modalSheet,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+        ]}
+      >
         <Animated.View
           style={{
             transform: [{ translateY: contentTranslateY }],
@@ -208,24 +242,33 @@ export default function WifiSelectionModal({
         >
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Retrieve Data</Text>
+              <Text style={[styles.modalTitle, { color: theme.text }]}>
+                Retrieve Data
+              </Text>
               <TouchableOpacity
                 onPress={handleClose}
                 style={styles.closeButton}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.scanButton} onPress={scanNetworks}>
-              <Ionicons name="refresh" size={20} color="#007aff" />
-              <Text style={styles.scanButtonText}>Scan for Networks</Text>
+            <TouchableOpacity
+              style={[styles.scanButton, { backgroundColor: theme.card }]}
+              onPress={scanNetworks}
+            >
+              <Ionicons name="refresh" size={20} color={theme.primary} />
+              <Text style={[styles.scanButtonText, { color: theme.primary }]}>
+                Scan for Networks
+              </Text>
             </TouchableOpacity>
 
             {scanning ? (
               <View style={styles.scanningContainer}>
-                <ActivityIndicator size="large" color="#007aff" />
-                <Text style={styles.scanningText}>
+                <ActivityIndicator size="large" color={theme.primary} />
+                <Text
+                  style={[styles.scanningText, { color: theme.textSecondary }]}
+                >
                   Scanning for networks...
                 </Text>
               </View>

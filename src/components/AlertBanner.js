@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
+import { useTheme } from "../contexts/ThemeContext";
 
 export const AlertBanner = ({
   visible,
   message = "Refreshed!",
   duration = 2000,
 }) => {
+  const { theme } = useTheme();
   const translateY = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export const AlertBanner = ({
         },
       ]}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, { backgroundColor: theme.primary }]}>
         <Text style={styles.text}>{message}</Text>
       </View>
     </Animated.View>
@@ -54,7 +56,6 @@ const styles = StyleSheet.create({
     paddingTop: 60, // Increased from 40 to account for Dynamic Island
   },
   content: {
-    backgroundColor: "#007AFF",
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
