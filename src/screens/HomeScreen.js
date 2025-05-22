@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   View,
@@ -9,10 +9,14 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
 import { ThemeToggle } from "../components/ThemeToggle";
+import { UserSelectionMenu } from "../components/UserSelectionMenu";
 import { useTheme } from "../contexts/ThemeContext";
+import { useUser } from "../contexts/UserContext";
 
 export const HomeScreen = () => {
   const { theme } = useTheme();
+  const { userType } = useUser();
+  const [showUserMenu, setShowUserMenu] = useState(false);
   // Mock data - would come from your actual data source
   const safetyScore = 86;
   const scoreBreakdown = [
@@ -61,14 +65,52 @@ export const HomeScreen = () => {
           </TouchableOpacity>
           <ThemeToggle />
         </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <MaterialCommunityIcons
-            name="account-circle"
-            size={28}
-            color={theme.primary}
-          />
-        </TouchableOpacity>
+        <View style={styles.userSection}>
+          {userType && (
+            <View
+              style={[
+                styles.userTypeBox,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.primary,
+                  shadowColor: theme.primary,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.userTypeText,
+                  {
+                    color: theme.text,
+                    ...(theme.dark && {
+                      textShadowColor: theme.primary,
+                      textShadowOffset: { width: 0, height: 0 },
+                      textShadowRadius: 4,
+                    }),
+                  },
+                ]}
+              >
+                {userType.charAt(0).toUpperCase() + userType.slice(1)}
+              </Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setShowUserMenu(true)}
+          >
+            <MaterialCommunityIcons
+              name="account-circle"
+              size={28}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <UserSelectionMenu
+        visible={showUserMenu}
+        onClose={() => setShowUserMenu(false)}
+      />
 
       <View style={[styles.container, { backgroundColor: theme.background }]}>
         {/* Main Score Card */}
@@ -399,5 +441,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#fff",
     opacity: 0.8,
+  },
+  userSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  userTypeBox: {
+    padding: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  userTypeText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
