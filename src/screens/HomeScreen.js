@@ -8,7 +8,6 @@ import {
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
-import { ThemeToggle } from "../components/ThemeToggle";
 import { UserSelectionMenu } from "../components/UserSelectionMenu";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
@@ -63,7 +62,6 @@ export const HomeScreen = () => {
               color={theme.primary}
             />
           </TouchableOpacity>
-          <ThemeToggle />
         </View>
         <View style={styles.userSection}>
           {userType && (

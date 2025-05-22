@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react";
+import { useColorScheme, Appearance } from "react-native";
 
 const ThemeContext = createContext();
 
@@ -30,16 +37,25 @@ export const themes = {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [isDark, setIsDark] = useState(false);
+  // Get initial system theme
+  const initialColorScheme = Appearance.getColorScheme() || "dark";
+  const [isDark, setIsDark] = useState(initialColorScheme === "dark");
 
-  const toggleTheme = useCallback(() => {
-    setIsDark((prev) => !prev);
+  // Subscribe to theme changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setIsDark(colorScheme === "dark");
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   const theme = isDark ? themes.dark : themes.light;
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, isDark }}>
       {children}
     </ThemeContext.Provider>
   );
