@@ -9,7 +9,7 @@ export const USER_TYPES = {
 };
 
 export const UserProvider = ({ children }) => {
-  const [userType, setUserType] = useState(null);
+  const [userType, setUserType] = useState(USER_TYPES.INDIVIDUAL);
 
   const updateUserType = (type) => {
     if (Object.values(USER_TYPES).includes(type)) {

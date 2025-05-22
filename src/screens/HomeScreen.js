@@ -74,6 +74,11 @@ export const HomeScreen = () => {
                   backgroundColor: theme.card,
                   borderColor: theme.primary,
                   shadowColor: theme.primary,
+                  ...(theme.dark && {
+                    shadowOpacity: 0.7,
+                    shadowRadius: 10,
+                    elevation: 10,
+                  }),
                 },
               ]}
             >
@@ -85,7 +90,7 @@ export const HomeScreen = () => {
                     ...(theme.dark && {
                       textShadowColor: theme.primary,
                       textShadowOffset: { width: 0, height: 0 },
-                      textShadowRadius: 4,
+                      textShadowRadius: 8,
                     }),
                   },
                 ]}

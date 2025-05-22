@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
+import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
 
 export default function WifiSelectionModal({
   visible,
@@ -29,27 +30,25 @@ export default function WifiSelectionModal({
   const [showingModal, setShowingModal] = useState(visible);
   const [dismissing, setDismissing] = useState(false);
 
-  // Animated values for overlay and sheet content
+  // Animated values for overlay and sheet
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const contentTranslateY = useRef(new Animated.Value(40)).current;
+  const sheetTranslateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
       setShowingModal(true);
       setDismissing(false);
       overlayOpacity.setValue(0);
-      contentTranslateY.setValue(40);
+      sheetTranslateY.setValue(1000); // Start from below screen
 
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 1,
-          duration: 250,
-          useNativeDriver: true,
+          ...TIMING_CONFIG,
         }),
-        Animated.spring(contentTranslateY, {
+        Animated.spring(sheetTranslateY, {
           toValue: 0,
-          useNativeDriver: true,
-          bounciness: 8,
+          ...SPRING_CONFIG,
         }),
       ]).start();
 
@@ -59,13 +58,11 @@ export default function WifiSelectionModal({
       Animated.parallel([
         Animated.timing(overlayOpacity, {
           toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
+          ...TIMING_CONFIG,
         }),
-        Animated.timing(contentTranslateY, {
-          toValue: 40,
-          duration: 150,
-          useNativeDriver: true,
+        Animated.timing(sheetTranslateY, {
+          toValue: 1000, // Slide down below screen
+          ...TIMING_CONFIG,
         }),
       ]).start(() => {
         setDismissing(false);
@@ -79,13 +76,11 @@ export default function WifiSelectionModal({
     Animated.parallel([
       Animated.timing(overlayOpacity, {
         toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
+        ...TIMING_CONFIG,
       }),
-      Animated.timing(contentTranslateY, {
-        toValue: 40,
-        duration: 150,
-        useNativeDriver: true,
+      Animated.timing(sheetTranslateY, {
+        toValue: 1000, // Slide down below screen
+        ...TIMING_CONFIG,
       }),
     ]).start(() => {
       setDismissing(false);
@@ -99,9 +94,7 @@ export default function WifiSelectionModal({
       setScanning(true);
 
       if (Platform.OS === "android") {
-        // Close the modal first
         handleClose();
-        // Small delay to ensure modal is closed before showing alert
         setTimeout(() => {
           Alert.alert(
             "Connect to WiFi",
@@ -130,152 +123,75 @@ export default function WifiSelectionModal({
     }
   };
 
-  // On iOS, show a simplified interface
-  if (Platform.OS === "ios") {
-    return (
-      <Modal
-        visible={showingModal}
-        animationType="none"
-        transparent={true}
-        onRequestClose={handleClose}
-        statusBarTranslucent={true}
-      >
-        <Animated.View
-          style={[styles.modalOverlay, { opacity: overlayOpacity }]}
-          pointerEvents={dismissing ? "none" : "auto"}
-        />
-        <View
-          style={[
-            styles.modalSheet,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <Animated.View
-            style={{
-              transform: [{ translateY: contentTranslateY }],
-              width: "100%",
-            }}
-          >
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={[styles.modalTitle, { color: theme.text }]}>
-                  WiFi Settings
-                </Text>
-                <TouchableOpacity
-                  onPress={handleClose}
-                  style={styles.closeButton}
-                >
-                  <Ionicons
-                    name="close"
-                    size={24}
-                    color={theme.textSecondary}
-                  />
-                </TouchableOpacity>
-              </View>
+  if (!showingModal) return null;
 
-              <View style={styles.iosMessageContainer}>
-                <Ionicons name="wifi" size={48} color={theme.primary} />
-                <Text style={[styles.iosMessageTitle, { color: theme.text }]}>
-                  Connect to WiFi
-                </Text>
-                <Text
-                  style={[
-                    styles.iosMessageText,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  To retrieve data from your OBD connector, please connect to
-                  its network.
-                </Text>
-                <TouchableOpacity
-                  style={[
-                    styles.iosSettingsButton,
-                    { backgroundColor: theme.primary },
-                  ]}
-                  onPress={() => {
-                    Linking.openURL("App-Prefs:root=WIFI");
-                    handleClose();
-                  }}
-                >
-                  <Text style={styles.iosSettingsButtonText}>
-                    Open Settings
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
-    );
-  }
-
-  // Android interface
   return (
     <Modal
       visible={showingModal}
       animationType="none"
       transparent={true}
-      onRequestClose={handleClose}
       statusBarTranslucent={true}
     >
       <Animated.View
-        style={[styles.modalOverlay, { opacity: overlayOpacity }]}
+        style={[
+          styles.modalOverlay,
+          {
+            opacity: overlayOpacity,
+            backgroundColor: theme.dark
+              ? "rgba(0, 0, 0, 0.7)"
+              : "rgba(0, 0, 0, 0.25)",
+          },
+        ]}
         pointerEvents={dismissing ? "none" : "auto"}
       />
-      <View
+      <Animated.View
         style={[
           styles.modalSheet,
           {
             backgroundColor: theme.card,
             borderColor: theme.border,
+            transform: [{ translateY: sheetTranslateY }],
           },
         ]}
       >
-        <Animated.View
-          style={{
-            transform: [{ translateY: contentTranslateY }],
-            width: "100%",
-          }}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.text }]}>
-                Retrieve Data
-              </Text>
-              <TouchableOpacity
-                onPress={handleClose}
-                style={styles.closeButton}
-              >
-                <Ionicons name="close" size={24} color={theme.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.scanButton, { backgroundColor: theme.card }]}
-              onPress={scanNetworks}
-            >
-              <Ionicons name="refresh" size={20} color={theme.primary} />
-              <Text style={[styles.scanButtonText, { color: theme.primary }]}>
-                Scan for Networks
-              </Text>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>
+              WiFi Settings
+            </Text>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
-
-            {scanning ? (
-              <View style={styles.scanningContainer}>
-                <ActivityIndicator size="large" color={theme.primary} />
-                <Text
-                  style={[styles.scanningText, { color: theme.textSecondary }]}
-                >
-                  Scanning for networks...
-                </Text>
-              </View>
-            ) : null}
           </View>
-        </Animated.View>
-      </View>
+
+          <View style={styles.iosMessageContainer}>
+            <Ionicons name="wifi" size={48} color={theme.primary} />
+            <Text style={[styles.iosMessageTitle, { color: theme.text }]}>
+              Connect to WiFi
+            </Text>
+            <Text
+              style={[styles.iosMessageText, { color: theme.textSecondary }]}
+            >
+              To retrieve data from your OBD connector, please connect to its
+              network.
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.iosSettingsButton,
+                { backgroundColor: theme.primary },
+              ]}
+              onPress={() => {
+                Platform.OS === "ios"
+                  ? Linking.openURL("App-Prefs:root=WIFI")
+                  : Linking.openSettings();
+                handleClose();
+              }}
+            >
+              <Text style={styles.iosSettingsButtonText}>Open Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -287,20 +203,21 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    zIndex: 1,
   },
   modalSheet: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "white",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: "80%",
-    marginTop: Platform.OS === "ios" ? 40 : 0,
-    overflow: "hidden",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 28,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    zIndex: 2,
   },
   modalContent: {
     width: "100%",
@@ -314,33 +231,9 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
   },
   closeButton: {
     padding: 5,
-  },
-  scanButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f0f0f0",
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  scanButtonText: {
-    marginLeft: 8,
-    color: "#007aff",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  scanningContainer: {
-    alignItems: "center",
-    padding: 20,
-  },
-  scanningText: {
-    marginTop: 10,
-    color: "#666",
-    fontSize: 16,
   },
   iosMessageContainer: {
     alignItems: "center",
@@ -349,25 +242,24 @@ const styles = StyleSheet.create({
   iosMessageTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
     marginTop: 16,
     marginBottom: 8,
   },
   iosMessageText: {
     fontSize: 16,
-    color: "#666",
     textAlign: "center",
     marginBottom: 24,
   },
   iosSettingsButton: {
-    backgroundColor: "#007aff",
     paddingVertical: 12,
     paddingHorizontal: 24,
-    borderRadius: 8,
+    borderRadius: 12,
+    width: "100%",
   },
   iosSettingsButtonText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",
+    textAlign: "center",
   },
 });

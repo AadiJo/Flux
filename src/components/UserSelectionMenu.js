@@ -1,11 +1,59 @@
-import React from "react";
-import { Modal, TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Modal,
+  TouchableOpacity,
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+} from "react-native";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser, USER_TYPES } from "../contexts/UserContext";
+import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
 
 export const UserSelectionMenu = ({ visible, onClose }) => {
   const { theme } = useTheme();
   const { updateUserType } = useUser();
+  const [showingModal, setShowingModal] = useState(visible);
+  const [dismissing, setDismissing] = useState(false);
+
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
+  const menuScale = useRef(new Animated.Value(0.95)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setShowingModal(true);
+      setDismissing(false);
+      overlayOpacity.setValue(0);
+      menuScale.setValue(0.95);
+
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          ...TIMING_CONFIG,
+        }),
+        Animated.spring(menuScale, {
+          toValue: 1,
+          ...SPRING_CONFIG,
+        }),
+      ]).start();
+    } else if (showingModal) {
+      setDismissing(true);
+      Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 0,
+          ...TIMING_CONFIG,
+        }),
+        Animated.timing(menuScale, {
+          toValue: 0.95,
+          ...TIMING_CONFIG,
+        }),
+      ]).start(() => {
+        setDismissing(false);
+        setShowingModal(false);
+      });
+    }
+  }, [visible]);
 
   const userOptions = [
     { id: 1, label: "Parent", value: USER_TYPES.PARENT },
@@ -18,19 +66,37 @@ export const UserSelectionMenu = ({ visible, onClose }) => {
     onClose();
   };
 
+  if (!showingModal) return null;
+
   return (
     <Modal
-      visible={visible}
+      visible={showingModal}
       transparent={true}
-      animationType="fade"
+      animationType="none"
       onRequestClose={onClose}
     >
       <TouchableOpacity
-        style={styles.modalOverlay}
+        style={[
+          styles.modalOverlay,
+          {
+            backgroundColor: theme.dark
+              ? "rgba(0, 0, 0, 0.7)"
+              : "rgba(0, 0, 0, 0.25)",
+          },
+        ]}
         activeOpacity={1}
         onPress={onClose}
       >
-        <View style={[styles.userMenu, { backgroundColor: theme.card }]}>
+        <Animated.View
+          style={[
+            styles.userMenu,
+            {
+              backgroundColor: theme.card,
+              opacity: overlayOpacity,
+              transform: [{ scale: menuScale }],
+            },
+          ]}
+        >
           {userOptions.map((option) => (
             <TouchableOpacity
               key={option.id}
@@ -42,7 +108,7 @@ export const UserSelectionMenu = ({ visible, onClose }) => {
               </Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </Animated.View>
       </TouchableOpacity>
     </Modal>
   );
@@ -51,7 +117,6 @@ export const UserSelectionMenu = ({ visible, onClose }) => {
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
   },

@@ -34,7 +34,7 @@ export const ThemeToggle = () => {
     >
       <Animated.View style={{ transform: [{ rotate: spin }] }}>
         <MaterialCommunityIcons
-          name={isDark ? "weather-night" : "weather-sunny"}
+          name={isDark ? "weather-sunny" : "weather-night"}
           size={24}
           color={theme.primary}
         />
