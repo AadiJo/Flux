@@ -10,6 +10,7 @@ import {
   Animated,
   PanResponder,
 } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const MAX_PULL = 48;
 
@@ -155,10 +156,7 @@ export default function WelcomeScreen({ visible, onContinue }) {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.iconContainer}>
-              <Image
-                source={require("../assets/icon.png")}
-                style={styles.icon}
-              />
+              <MaterialCommunityIcons name="car" size={64} color="white" />
             </View>
             <Text style={styles.title}>Welcome to OBDApp</Text>
             <Text style={styles.subtitle}>
@@ -167,9 +165,10 @@ export default function WelcomeScreen({ visible, onContinue }) {
               eu fermentum risus nulla.
             </Text>
             <View style={styles.peopleContainer}>
-              <Image
-                source={require("../assets/icon.png")}
-                style={styles.peopleIcon}
+              <MaterialCommunityIcons
+                name="car-connected"
+                size={32}
+                color="#007aff"
               />
             </View>
             <Text style={styles.privacy}>

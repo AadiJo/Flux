@@ -2,24 +2,53 @@ import React from "react";
 import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-export const LiveScreen = ({ onOpenWifiModal, selectedNetwork }) => {
+export const LiveScreen = ({
+  onOpenWifiModal,
+  selectedNetwork,
+  onResetSplash,
+}) => {
   return (
-    <View style={styles.dataContainer}>
-      <Text style={styles.heading}>Live Data</Text>
-      <TouchableOpacity style={styles.wifiButton} onPress={onOpenWifiModal}>
-        <Ionicons name="wifi" size={24} color="#007aff" />
-        <Text style={styles.wifiButtonText}>
-          {selectedNetwork
-            ? `Connected to ${selectedNetwork.ssid}`
-            : "Retrieve Data"}
-        </Text>
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.refreshButton}
+        onPress={onResetSplash}
+        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+      >
+        <Ionicons name="refresh" size={24} color="#007aff" />
       </TouchableOpacity>
-      <Text style={styles.value}>Real time data</Text>
+      <View style={styles.dataContainer}>
+        <Text style={styles.heading}>Live Data</Text>
+        <TouchableOpacity style={styles.wifiButton} onPress={onOpenWifiModal}>
+          <Ionicons name="wifi" size={24} color="#007aff" />
+          <Text style={styles.wifiButtonText}>
+            {selectedNetwork
+              ? `Connected to ${selectedNetwork.ssid}`
+              : "Retrieve Data"}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.value}>Real time data</Text>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  refreshButton: {
+    position: "absolute",
+    top: 10,
+    left: 20,
+    zIndex: 1,
+    padding: 12,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 20,
+  },
   dataContainer: {
     width: "90%",
     alignItems: "center",
@@ -32,6 +61,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 1,
     maxWidth: 600,
+    marginTop: 0,
   },
   heading: {
     fontSize: 22,
