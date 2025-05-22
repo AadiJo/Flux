@@ -65,13 +65,15 @@ export const HomeScreen = () => {
         </View>
         <View style={styles.userSection}>
           {userType && (
-            <View
+            <TouchableOpacity
+              onPress={() => setShowUserMenu(true)}
               style={[
                 styles.userTypeBox,
                 {
                   backgroundColor: theme.card,
                   borderColor: theme.primary,
                   shadowColor: theme.primary,
+                  minWidth: 90, // Width of longest type name ("Individual")
                   ...(theme.dark && {
                     shadowOpacity: 0.7,
                     shadowRadius: 10,
@@ -85,6 +87,7 @@ export const HomeScreen = () => {
                   styles.userTypeText,
                   {
                     color: theme.text,
+                    textAlign: "center",
                     ...(theme.dark && {
                       textShadowColor: theme.primary,
                       textShadowOffset: { width: 0, height: 0 },
@@ -95,18 +98,8 @@ export const HomeScreen = () => {
               >
                 {userType.charAt(0).toUpperCase() + userType.slice(1)}
               </Text>
-            </View>
+            </TouchableOpacity>
           )}
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => setShowUserMenu(true)}
-          >
-            <MaterialCommunityIcons
-              name="account-circle"
-              size={28}
-              color={theme.primary}
-            />
-          </TouchableOpacity>
         </View>
       </View>
 
