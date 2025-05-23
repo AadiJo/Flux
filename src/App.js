@@ -13,6 +13,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { MotionScreen } from "./screens/MotionScreen";
 import { LiveScreen } from "./screens/LiveScreen";
 import { SimulationScreen } from "./screens/SimulationScreen";
+import { MapsScreen } from "./screens/MapsScreen";
 import { useWifiConnection } from "./hooks/useWifiConnection";
 import { useAlertBanner } from "./hooks/useAlertBanner";
 
@@ -98,6 +99,7 @@ const AppContent = () => {
         {selectedMode === "simulation" && (
           <SimulationScreen onResetSplash={handleResetSplash} />
         )}
+        {selectedMode === "maps" && <MapsScreen />}
       </View>
 
       <View
@@ -210,6 +212,30 @@ const AppContent = () => {
             Simulation
           </Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => setSelectedMode("maps")}
+        >
+          <MaterialCommunityIcons
+            name="map"
+            size={24}
+            color={
+              selectedMode === "maps" ? theme.primary : theme.textSecondary
+            }
+          />
+          <Text
+            style={[
+              styles.navText,
+              {
+                color:
+                  selectedMode === "maps" ? theme.primary : theme.textSecondary,
+              },
+            ]}
+          >
+            Maps
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <WifiSelectionModal
@@ -234,21 +260,18 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   contentContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 20,
-    paddingBottom: 90, // Add padding to account for floating navbar
   },
   navbar: {
     flexDirection: "row",
-    justifyContent: "space-around",
+    justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: "#fff",
-    paddingVertical: 16,
+    paddingVertical: 8,
     borderRadius: 20,
     shadowColor: "#000",
     shadowOffset: {
@@ -264,17 +287,21 @@ const styles = StyleSheet.create({
     right: 20,
     borderWidth: 1,
     borderColor: "#eee",
+    height: 65,
+    zIndex: 1,
   },
   navItem: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 12, // Increased touch target
-    minWidth: 80, // Ensure minimum width for touch target
+    maxWidth: "20%",
+    paddingHorizontal: 4,
   },
   navText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 2,
     color: "#666",
+    textAlign: "center",
   },
   activeNavText: {
     color: "#007AFF",

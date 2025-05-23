@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "OBApp",
-    "slug": "OBApp",
+    "name": "OBDApp",
+    "slug": "OBDApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -39,7 +39,7 @@
       [
         "expo-sensors",
         {
-          "motionPermission": "Allow MyApp to access your device motion."
+          "motionPermission": "Allow OBDApp to access your device motion."
         }
       ],
       [
