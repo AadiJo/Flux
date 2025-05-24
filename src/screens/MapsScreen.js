@@ -35,126 +35,139 @@ const renderBulletedText = (text, highlightColor, theme) => {
 };
 
 export const MapsScreen = () => {
-  console.log("MapsScreen rendering"); // Debug log
   const { theme, isDark } = useTheme();
   const [location, setLocation] = useState(null);
   const [streetName, setStreetName] = useState("Getting location...");
-  const [isMapReady, setIsMapReady] = useState(false);
   const mapRef = useRef(null);
-  const isMounted = useRef(true); // Use useRef for isMounted
-  const [roadStartCoords, setRoadStartCoords] = useState(null); // For the first pin
-  const [roadEndCoords, setRoadEndCoords] = useState(null); // For the second pin
-  const [mapStatusMessage, setMapStatusMessage] = useState(""); // To inform user
+  const isMounted = useRef(true);
+  const [roadStartCoords, setRoadStartCoords] = useState(null);
+  const [roadEndCoords, setRoadEndCoords] = useState(null);
+  const [mapStatusMessage, setMapStatusMessage] = useState("");
+  const [region, setRegion] = useState(null);
 
+  // Function to update map region
+  const updateMapRegion = useCallback((latitude, longitude) => {
+    setRegion({
+      latitude,
+      longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+  }, []);
+
+  // Handle location and road endpoints
+  const handleLocationAndRoads = useCallback(async (initialLocation) => {
+    try {
+      if (!isMounted.current) return;
+
+      setLocation(initialLocation);
+      updateMapRegion(
+        initialLocation.coords.latitude,
+        initialLocation.coords.longitude
+      );
+
+      const address = await Location.reverseGeocodeAsync({
+        latitude: initialLocation.coords.latitude,
+        longitude: initialLocation.coords.longitude,
+      });
+
+      let currentStreetName = "Street name not available";
+      if (address[0]?.street) {
+        currentStreetName = address[0].street;
+      }
+      if (!isMounted.current) return;
+      setStreetName(currentStreetName);
+
+      if (
+        currentStreetName &&
+        currentStreetName !== "Street name not available" &&
+        currentStreetName !== "Unnamed Road"
+      ) {
+        setMapStatusMessage("Finding road ends...");
+
+        const roadEndpoints = await getRoadEndpointsFromOSM(
+          initialLocation.coords.latitude,
+          initialLocation.coords.longitude,
+          currentStreetName
+        );
+
+        if (!isMounted.current) return;
+
+        if (roadEndpoints) {
+          setRoadStartCoords(roadEndpoints.start);
+          setRoadEndCoords(roadEndpoints.end);
+          setMapStatusMessage("");
+        } else {
+          setMapStatusMessage("Could not determine road ends.");
+          setRoadStartCoords(null);
+          setRoadEndCoords(null);
+        }
+      } else {
+        setMapStatusMessage("Current road not identified for pinning ends.");
+        setRoadStartCoords(null);
+        setRoadEndCoords(null);
+      }
+    } catch (error) {
+      console.error("Error in handleLocationAndRoads:", error);
+      if (isMounted.current) {
+        setMapStatusMessage("Error processing location data.");
+      }
+    }
+  }, []);
+
+  // Initial setup
   useEffect(() => {
     let locationSubscription;
-    // let isMounted = true; // Removed, using useRef now
 
-    const setupLocationAndRoads = async () => {
+    const setupLocation = async () => {
       try {
-        let { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          if (isMounted.current) setStreetName("Location permission denied");
+          if (isMounted.current) {
+            setStreetName("Location permission denied");
+            setMapStatusMessage("Location permission required");
+          }
           return;
         }
 
         const initialLocation = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.BestForNavigation,
         });
-        if (!isMounted.current) return;
-        setLocation(initialLocation);
 
-        const address = await Location.reverseGeocodeAsync({
-          latitude: initialLocation.coords.latitude,
-          longitude: initialLocation.coords.longitude,
-        });
+        await handleLocationAndRoads(initialLocation);
 
-        let currentStreetName = "Street name not available";
-        if (address[0] && address[0].street) {
-          currentStreetName = address[0].street;
-        }
-        if (isMounted.current) setStreetName(currentStreetName);
-
-        // Fetch road endpoints if we have a valid street name
-        if (
-          currentStreetName &&
-          currentStreetName !== "Street name not available" &&
-          currentStreetName !== "Unnamed Road"
-        ) {
-          if (isMounted.current) setMapStatusMessage("Finding road ends...");
-          const roadEndpoints = await getRoadEndpointsFromOSM(
-            initialLocation.coords.latitude,
-            initialLocation.coords.longitude,
-            currentStreetName
-          );
-          if (isMounted.current) {
-            if (roadEndpoints) {
-              setRoadStartCoords(roadEndpoints.start);
-              setRoadEndCoords(roadEndpoints.end);
-              setMapStatusMessage(""); // Clear status
-            } else {
-              setMapStatusMessage("Could not determine road ends.");
-              // Fallback or keep pins null
-              setRoadStartCoords(null);
-              setRoadEndCoords(null);
-            }
-          }
-        } else {
-          if (isMounted.current)
-            setMapStatusMessage(
-              "Current road not identified for pinning ends."
-            );
-          setRoadStartCoords(null);
-          setRoadEndCoords(null);
-        }
-
-        // Watch location changes (simplified for now, road end updates on move would be complex)
+        // Watch location changes
         locationSubscription = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.BestForNavigation,
-            distanceInterval: 100, // Update less frequently for now
+            distanceInterval: 100,
             timeInterval: 10000,
           },
           async (newLocation) => {
             if (!isMounted.current) return;
-            setLocation(newLocation);
-            // For simplicity, we are not re-fetching road ends on every move yet.
-            // This would require careful management to avoid excessive API calls.
-            // We could update the street name display if desired.
-            const newAddress = await Location.reverseGeocodeAsync({
-              latitude: newLocation.coords.latitude,
-              longitude: newLocation.coords.longitude,
-            });
-            if (isMounted.current && newAddress[0]) {
-              setStreetName(
-                newAddress[0].street || "Street name not available"
-              );
-            }
+            await handleLocationAndRoads(newLocation);
           }
         );
       } catch (error) {
-        console.error("Location or Road Fetch error:", error);
-        if (isMounted.current) setStreetName("Error getting location");
-        if (isMounted.current)
-          setMapStatusMessage("Error processing location data.");
+        console.error("Location setup error:", error);
+        if (isMounted.current) {
+          setStreetName("Error getting location");
+          setMapStatusMessage("Error accessing location services");
+        }
       }
     };
 
-    setupLocationAndRoads();
+    setupLocation();
 
     return () => {
-      isMounted.current = false; // Set current to false on unmount
+      isMounted.current = false;
       if (locationSubscription) {
         locationSubscription.remove();
       }
     };
-  }, []); // Dependencies for useEffect: theme, isDark (if used in effect, but they are not)
+  }, [handleLocationAndRoads]);
 
-  const onMapReady = useCallback(() => {
-    if (isMounted.current) setIsMapReady(true);
-  }, []); // isMounted.current will be correctly accessed, no need to add isMounted ref itself to deps
-
-  if (!location) {
+  if (!location || !region) {
     return (
       <SafeAreaView
         style={[styles.mapWrapper, { backgroundColor: theme.background }]}
@@ -180,24 +193,21 @@ export const MapsScreen = () => {
           ref={mapRef}
           provider={PROVIDER_DEFAULT}
           style={styles.map}
+          region={region}
           showsUserLocation
           showsMyLocationButton
           showsCompass={false}
-          onMapReady={onMapReady}
           mapPadding={{ bottom: -60, top: 0, right: 0, left: 0 }}
-          initialRegion={{
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-            latitudeDelta: 0.01, // Wider initial view
-            longitudeDelta: 0.01, // Wider initial view
+          onRegionChangeComplete={(newRegion) => {
+            setRegion(newRegion);
           }}
         >
           {roadStartCoords && (
             <Marker
+              identifier="start"
               coordinate={roadStartCoords}
               pinColor="red"
-              title="Road Start"
-              tracksViewChanges={!isMapReady}
+              tracksViewChanges={false}
               calloutOffset={{ x: 0, y: 30 }}
             >
               <Callout tooltip style={styles.calloutContainer}>
@@ -213,10 +223,10 @@ export const MapsScreen = () => {
           )}
           {roadEndCoords && (
             <Marker
+              identifier="end"
               coordinate={roadEndCoords}
               pinColor="green"
-              title="Road End"
-              tracksViewChanges={!isMapReady}
+              tracksViewChanges={false}
               calloutOffset={{ x: 0, y: 30 }}
             >
               <Callout tooltip style={styles.calloutContainer}>
