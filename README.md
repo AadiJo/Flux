@@ -2,6 +2,8 @@
   <img src="https://i.imgur.com/h4r6PcA.gif" alt="OBD Animation" />
 </p>
 
+An app that connects to your car’s OBD-II port to track driving habits, score performance, and help you drive smarter.
+
 ## Codebase Structure
 ```
 ├── src/                   // Main application source code
