@@ -19,3 +19,19 @@
 ├── OBDReader.js           // OBD communication sample
 └── HardwareRefs.zip       // Hardware reference documentation
 ```
+
+## 🎯 Project Goal
+
+By the time this project is complete, it will be a fully featured mobile application that:
+
+- **Seamlessly connects** to any vehicle’s OBD‑II port (via Bluetooth or Wi‑Fi) to ingest real‑time engine and driving telemetry.
+- **Continuously evaluates** key driving metrics (e.g., harsh acceleration, sudden braking, cornering, speed compliance) and computes an easy‑to‑understand safety score for each trip.
+- **Delivers actionable insights** through interactive visualizations—heatmaps of problem areas, trip summaries, and trend charts—so drivers (or parents of teen drivers) can pinpoint and correct risky behaviors.
+- **Provides a parental dashboard** that:
+  - Highlights repeat problem zones on a map  
+  - Sends customizable alerts for out‑of‑bounds driving events  
+  - Tracks a teen’s progress over time with historical score comparisons
+- **Supports an insurance preview mode** (optional)—letting individuals simulate how their driving score would translate into usage‑based rates, before investing in a full telematics policy.
+- **Is designed for extensibility**, so future enhancements (gamification, social leaderboards, automated coaching prompts, etc.) can be added with minimal friction.
+
+With these features, the finished product will empower parents to coach their teens and help all drivers develop safer habits.
