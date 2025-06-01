@@ -35,3 +35,7 @@ By the time this project is complete, it will be a fully featured mobile applica
 - **Is designed for extensibility**, so future enhancements (gamification, social leaderboards, automated coaching prompts, etc.) can be added with minimal friction.
 
 With these features, the finished product will empower parents to coach their teens and help all drivers develop safer habits.
+
+## Bugs / Feature Improvements
+
+- Async location processing
