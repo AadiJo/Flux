@@ -13,6 +13,8 @@
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-native-community/geolocation": "^3.4.0",
+    "@react-navigation/bottom-tabs": "^7.3.13",
+    "@react-navigation/native": "^7.1.9",
     "expo-location": "^18.1.5",
     "expo-sensors": "~14.1.4",
     "expo-splash-screen": "~0.30.8",
@@ -20,9 +22,11 @@
     "react": "19.0.0",
     "react-native": "0.79.2",
     "react-native-chart-kit": "^6.12.0",
+    "react-native-maps": "1.20.1",
+    "react-native-safe-area-context": "^5.4.1",
+    "react-native-screens": "^4.10.0",
     "react-native-svg": "^15.12.0",
-    "react-native-wifi-reborn": "^4.13.5",
-    "react-native-maps": "1.20.1"
+    "react-native-wifi-reborn": "^4.13.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

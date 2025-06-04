@@ -16,7 +16,7 @@ An app that connects to your car’s OBD-II port to track driving habits, score 
 │   ├── constants/         // Application constants and configurations
 │   └── App.js             // Root application component
 ├── app.json               // Expo app configuration
-├── index.js               // Application entry point
+├── index.js               // Appglication entry point
 └── package.json           // Project dependencies and scripts
 ```
 

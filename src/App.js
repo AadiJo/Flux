@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
+import * as Location from "expo-location";
 
 import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
@@ -33,9 +34,34 @@ const AppContent = () => {
     handleWifiSelect,
   } = useWifiConnection();
 
+  // Add location state
+  const [location, setLocation] = useState(null);
+  const [streetName, setStreetName] = useState(null);
+
   useEffect(() => {
     async function prepare() {
       try {
+        // Get location permission and initial location while loading
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setLocation(currentLocation);
+
+          // Get street name
+          const address = await Location.reverseGeocodeAsync({
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+          });
+
+          if (address && address[0]?.street) {
+            setStreetName(address[0].street);
+          } else {
+            setStreetName("Unknown Street");
+          }
+        }
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const hasSeenWelcome = await AsyncStorage.getItem("hasSeenWelcome");
         setHasSeenWelcome(!hasSeenWelcome);
@@ -48,6 +74,46 @@ const AppContent = () => {
 
     prepare();
   }, []);
+
+  // Set up location watching
+  useEffect(() => {
+    let locationSubscription;
+
+    async function setupLocationWatching() {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 10000,
+            distanceInterval: 10,
+          },
+          async (newLocation) => {
+            setLocation(newLocation);
+
+            const newAddress = await Location.reverseGeocodeAsync({
+              latitude: newLocation.coords.latitude,
+              longitude: newLocation.coords.longitude,
+            });
+
+            if (newAddress && newAddress[0]?.street) {
+              setStreetName(newAddress[0].street);
+            }
+          }
+        );
+      }
+    }
+
+    if (isAppReady) {
+      setupLocationWatching();
+    }
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [isAppReady]);
 
   useEffect(() => {
     if (isAppReady) {
@@ -99,7 +165,9 @@ const AppContent = () => {
         {selectedMode === "simulation" && (
           <SimulationScreen onResetSplash={handleResetSplash} />
         )}
-        {selectedMode === "maps" && <MapsScreen />}
+        {selectedMode === "maps" && (
+          <MapsScreen appLocation={location} appStreetName={streetName} />
+        )}
       </View>
 
       <View
