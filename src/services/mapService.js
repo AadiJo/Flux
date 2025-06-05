@@ -1,5 +1,85 @@
 const OVERPASS_API_URL = "https://overpass-api.de/api/interpreter";
 
+const getMphFromKph = (kph) => kph * 0.621371;
+
+const getDefaultSpeedLimit = (highwayTag) => {
+  switch (highwayTag) {
+    case "motorway":
+      return getMphFromKph(110); // ~68 mph
+    case "trunk":
+      return getMphFromKph(90); // ~56 mph
+    case "primary":
+      return getMphFromKph(80); // ~50 mph
+    case "secondary":
+      return getMphFromKph(70); // ~43 mph
+    case "tertiary":
+      return getMphFromKph(50); // ~31 mph
+    case "residential":
+    case "living_street":
+      return getMphFromKph(30); // ~19 mph
+    case "unclassified":
+      return getMphFromKph(40); // ~25 mph
+    default:
+      return null;
+  }
+};
+
+/**
+ * Fetches the speed limit for a given location using the Overpass API.
+ *
+ * @param {number} latitude
+ * @param {number} longitude
+ * @returns {Promise<number|null>} The speed limit in MPH, or null if not found.
+ */
+export const getSpeedLimit = async (latitude, longitude) => {
+  if (!latitude || !longitude) {
+    return null;
+  }
+
+  const query = `
+    [out:json];
+    way(around:100,${latitude},${longitude})[highway];
+    out tags;
+  `;
+
+  const url = `${OVERPASS_API_URL}?data=${encodeURIComponent(query)}`;
+
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.elements && data.elements.length > 0) {
+      // First, check for an explicit maxspeed tag
+      for (const element of data.elements) {
+        if (element.tags && element.tags.maxspeed) {
+          const maxspeed = element.tags.maxspeed;
+          if (maxspeed.toLowerCase().includes("mph")) {
+            return parseInt(maxspeed, 10);
+          }
+          const speedKph = parseInt(maxspeed, 10);
+          if (!isNaN(speedKph)) {
+            return getMphFromKph(speedKph);
+          }
+        }
+      }
+
+      // If no explicit maxspeed, fallback to highway type
+      for (const element of data.elements) {
+        if (element.tags && element.tags.highway) {
+          const fallbackSpeed = getDefaultSpeedLimit(element.tags.highway);
+          if (fallbackSpeed) {
+            return fallbackSpeed;
+          }
+        }
+      }
+    }
+    return null; // No road with a speed limit or fallback found
+  } catch (error) {
+    console.error("Error fetching speed limit from Overpass:", error);
+    return null;
+  }
+};
+
 /**
  * Fetches the start and end coordinates of a road segment from OpenStreetMap
  * based on the user's current location and the road's name.

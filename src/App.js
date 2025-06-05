@@ -5,6 +5,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
+import * as Location from "expo-location";
+import { LocationProvider } from "./contexts/LocationContext";
 
 import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
@@ -33,9 +35,34 @@ const AppContent = () => {
     handleWifiSelect,
   } = useWifiConnection();
 
+  // Add location state
+  const [location, setLocation] = useState(null);
+  const [streetName, setStreetName] = useState(null);
+
   useEffect(() => {
     async function prepare() {
       try {
+        // Get location permission and initial location while loading
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setLocation(currentLocation);
+
+          // Get street name
+          const address = await Location.reverseGeocodeAsync({
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+          });
+
+          if (address && address[0]?.street) {
+            setStreetName(address[0].street);
+          } else {
+            setStreetName("Unknown Street");
+          }
+        }
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const hasSeenWelcome = await AsyncStorage.getItem("hasSeenWelcome");
         setHasSeenWelcome(!hasSeenWelcome);
@@ -48,6 +75,46 @@ const AppContent = () => {
 
     prepare();
   }, []);
+
+  // Set up location watching
+  useEffect(() => {
+    let locationSubscription;
+
+    async function setupLocationWatching() {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        locationSubscription = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 10000,
+            distanceInterval: 10,
+          },
+          async (newLocation) => {
+            setLocation(newLocation);
+
+            const newAddress = await Location.reverseGeocodeAsync({
+              latitude: newLocation.coords.latitude,
+              longitude: newLocation.coords.longitude,
+            });
+
+            if (newAddress && newAddress[0]?.street) {
+              setStreetName(newAddress[0].street);
+            }
+          }
+        );
+      }
+    }
+
+    if (isAppReady) {
+      setupLocationWatching();
+    }
+
+    return () => {
+      if (locationSubscription) {
+        locationSubscription.remove();
+      }
+    };
+  }, [isAppReady]);
 
   useEffect(() => {
     if (isAppReady) {
@@ -78,172 +145,185 @@ const AppContent = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <AlertBanner visible={isVisible} />
-      <WelcomeScreen visible={hasSeenWelcome} onContinue={handleContinue} />
+    <LocationProvider location={location} streetName={streetName}>
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <AlertBanner visible={isVisible} />
+        <WelcomeScreen visible={hasSeenWelcome} onContinue={handleContinue} />
 
-      <View
-        style={[styles.contentContainer, { backgroundColor: theme.background }]}
-      >
-        {selectedMode === "home" && <HomeScreen />}
-        {selectedMode === "motion" && (
-          <MotionScreen onResetSplash={handleResetSplash} />
-        )}
-        {selectedMode === "live" && (
-          <LiveScreen
-            onOpenWifiModal={() => setIsWifiModalVisible(true)}
-            selectedNetwork={selectedNetwork}
-            onResetSplash={handleResetSplash}
-          />
-        )}
-        {selectedMode === "simulation" && (
-          <SimulationScreen onResetSplash={handleResetSplash} />
-        )}
-        {selectedMode === "maps" && <MapsScreen />}
+        <View
+          style={[
+            styles.contentContainer,
+            { backgroundColor: theme.background },
+          ]}
+        >
+          {selectedMode === "home" && <HomeScreen />}
+          {selectedMode === "motion" && (
+            <MotionScreen onResetSplash={handleResetSplash} />
+          )}
+          {selectedMode === "live" && (
+            <LiveScreen
+              onOpenWifiModal={() => setIsWifiModalVisible(true)}
+              selectedNetwork={selectedNetwork}
+              onResetSplash={handleResetSplash}
+            />
+          )}
+          {selectedMode === "simulation" && (
+            <SimulationScreen onResetSplash={handleResetSplash} />
+          )}
+          {selectedMode === "maps" && (
+            <MapsScreen appLocation={location} appStreetName={streetName} />
+          )}
+        </View>
+
+        <View
+          style={[
+            styles.navbar,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setSelectedMode("home")}
+          >
+            <MaterialCommunityIcons
+              name="home"
+              size={24}
+              color={
+                selectedMode === "home" ? theme.primary : theme.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.navText,
+                {
+                  color:
+                    selectedMode === "home"
+                      ? theme.primary
+                      : theme.textSecondary,
+                },
+              ]}
+            >
+              Home
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setSelectedMode("motion")}
+          >
+            <MaterialCommunityIcons
+              name="motion-sensor"
+              size={24}
+              color={
+                selectedMode === "motion" ? theme.primary : theme.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.navText,
+                {
+                  color:
+                    selectedMode === "motion"
+                      ? theme.primary
+                      : theme.textSecondary,
+                },
+              ]}
+            >
+              Motion
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setSelectedMode("live")}
+          >
+            <MaterialCommunityIcons
+              name="connection"
+              size={24}
+              color={
+                selectedMode === "live" ? theme.primary : theme.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.navText,
+                {
+                  color:
+                    selectedMode === "live"
+                      ? theme.primary
+                      : theme.textSecondary,
+                },
+              ]}
+            >
+              Live
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setSelectedMode("simulation")}
+          >
+            <MaterialCommunityIcons
+              name="desktop-classic"
+              size={24}
+              color={
+                selectedMode === "simulation"
+                  ? theme.primary
+                  : theme.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.navText,
+                {
+                  color:
+                    selectedMode === "simulation"
+                      ? theme.primary
+                      : theme.textSecondary,
+                },
+              ]}
+            >
+              Simulation
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.navItem}
+            onPress={() => setSelectedMode("maps")}
+          >
+            <MaterialCommunityIcons
+              name="map"
+              size={24}
+              color={
+                selectedMode === "maps" ? theme.primary : theme.textSecondary
+              }
+            />
+            <Text
+              style={[
+                styles.navText,
+                {
+                  color:
+                    selectedMode === "maps"
+                      ? theme.primary
+                      : theme.textSecondary,
+                },
+              ]}
+            >
+              Maps
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <WifiSelectionModal
+          visible={isWifiModalVisible}
+          onSelect={handleWifiSelect}
+          onClose={() => setIsWifiModalVisible(false)}
+        />
       </View>
-
-      <View
-        style={[
-          styles.navbar,
-          {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setSelectedMode("home")}
-        >
-          <MaterialCommunityIcons
-            name="home"
-            size={24}
-            color={
-              selectedMode === "home" ? theme.primary : theme.textSecondary
-            }
-          />
-          <Text
-            style={[
-              styles.navText,
-              {
-                color:
-                  selectedMode === "home" ? theme.primary : theme.textSecondary,
-              },
-            ]}
-          >
-            Home
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setSelectedMode("motion")}
-        >
-          <MaterialCommunityIcons
-            name="motion-sensor"
-            size={24}
-            color={
-              selectedMode === "motion" ? theme.primary : theme.textSecondary
-            }
-          />
-          <Text
-            style={[
-              styles.navText,
-              {
-                color:
-                  selectedMode === "motion"
-                    ? theme.primary
-                    : theme.textSecondary,
-              },
-            ]}
-          >
-            Motion
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setSelectedMode("live")}
-        >
-          <MaterialCommunityIcons
-            name="connection"
-            size={24}
-            color={
-              selectedMode === "live" ? theme.primary : theme.textSecondary
-            }
-          />
-          <Text
-            style={[
-              styles.navText,
-              {
-                color:
-                  selectedMode === "live" ? theme.primary : theme.textSecondary,
-              },
-            ]}
-          >
-            Live
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setSelectedMode("simulation")}
-        >
-          <MaterialCommunityIcons
-            name="desktop-classic"
-            size={24}
-            color={
-              selectedMode === "simulation"
-                ? theme.primary
-                : theme.textSecondary
-            }
-          />
-          <Text
-            style={[
-              styles.navText,
-              {
-                color:
-                  selectedMode === "simulation"
-                    ? theme.primary
-                    : theme.textSecondary,
-              },
-            ]}
-          >
-            Simulation
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setSelectedMode("maps")}
-        >
-          <MaterialCommunityIcons
-            name="map"
-            size={24}
-            color={
-              selectedMode === "maps" ? theme.primary : theme.textSecondary
-            }
-          />
-          <Text
-            style={[
-              styles.navText,
-              {
-                color:
-                  selectedMode === "maps" ? theme.primary : theme.textSecondary,
-              },
-            ]}
-          >
-            Maps
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <WifiSelectionModal
-        visible={isWifiModalVisible}
-        onClose={() => setIsWifiModalVisible(false)}
-        onSelectNetwork={handleWifiSelect}
-      />
-    </View>
+    </LocationProvider>
   );
 };
 
