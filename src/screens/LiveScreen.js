@@ -50,9 +50,19 @@ export const LiveScreen = ({
   const [speedLimit, setSpeedLimit] = useState(null);
   const dataInterval = useRef(null);
   const lastFetchFailed = useRef(false);
+  const bannerShown = useRef(false);
 
   const isConnected = isWicanSimulated || isWicanConnected;
   const isDataAvailable = isApiConnected || isWicanSimulated;
+
+  useEffect(() => {
+    if (isDataAvailable && !bannerShown.current) {
+      showBanner({ message: "Connected!", backgroundColor: "#4CAF50" });
+      bannerShown.current = true;
+    } else if (!isDataAvailable) {
+      bannerShown.current = false;
+    }
+  }, [isDataAvailable, showBanner]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -138,7 +148,6 @@ export const LiveScreen = ({
       }
       if (!isApiConnected) {
         setIsApiConnected(true);
-        showBanner({ message: "Connected!", backgroundColor: "#4CAF50" });
       }
       const newObd2Data = {
         speed: Math.floor(60 + Math.random() * 10 - 5),
@@ -152,38 +161,44 @@ export const LiveScreen = ({
           ? updatedHistory.slice(-MAX_SPEED_DATA_POINTS)
           : updatedHistory;
       });
-      return;
-    }
-    try {
-      const newObd2Data = await fetchWicanData();
-      if (!isLogging) {
-        setIsLogging(true);
-      }
-      setObd2Data(newObd2Data);
-      setSpeedHistory((prevHistory) => {
-        const updatedHistory = [...prevHistory, newObd2Data.speed];
-        return updatedHistory.length > MAX_SPEED_DATA_POINTS
-          ? updatedHistory.slice(-MAX_SPEED_DATA_POINTS)
-          : updatedHistory;
-      });
       if (!isApiConnected) {
         setIsApiConnected(true);
-        showBanner({ message: "Connected!", backgroundColor: "#4CAF50" });
       }
       if (lastFetchFailed.current) {
         console.log("Connection to WiCAN re-established.");
         lastFetchFailed.current = false;
       }
-    } catch (error) {
-      if (isApiConnected) {
-        setIsApiConnected(false);
-      }
-      if (!lastFetchFailed.current) {
-        console.error(
-          "Failed to fetch WiCAN data. Further errors will be suppressed until connection is re-established.",
-          error
-        );
-        lastFetchFailed.current = true;
+    } else {
+      try {
+        const newObd2Data = await fetchWicanData();
+        if (!isLogging) {
+          setIsLogging(true);
+        }
+        setObd2Data(newObd2Data);
+        setSpeedHistory((prevHistory) => {
+          const updatedHistory = [...prevHistory, newObd2Data.speed];
+          return updatedHistory.length > MAX_SPEED_DATA_POINTS
+            ? updatedHistory.slice(-MAX_SPEED_DATA_POINTS)
+            : updatedHistory;
+        });
+        if (!isApiConnected) {
+          setIsApiConnected(true);
+        }
+        if (lastFetchFailed.current) {
+          console.log("Connection to WiCAN re-established.");
+          lastFetchFailed.current = false;
+        }
+      } catch (error) {
+        if (isApiConnected) {
+          setIsApiConnected(false);
+        }
+        if (!lastFetchFailed.current) {
+          console.error(
+            "Failed to fetch WiCAN data. Further errors will be suppressed until connection is re-established.",
+            error
+          );
+          lastFetchFailed.current = true;
+        }
       }
     }
   };
