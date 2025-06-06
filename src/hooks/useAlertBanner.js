@@ -1,35 +1,27 @@
-import { useState, useCallback, useEffect } from "react";
-
-// This variable will be reset on every hot reload
-let isFirstRender = true;
+import { useState, useCallback } from "react";
 
 export const useAlertBanner = () => {
-  const [isVisible, setIsVisible] = useState(false);
+  const [bannerConfig, setBannerConfig] = useState({
+    isVisible: false,
+    message: "",
+    backgroundColor: "",
+  });
 
-  // Show banner on every hot reload
-  useEffect(() => {
-    if (isFirstRender) {
-      setIsVisible(true);
-      isFirstRender = false;
-    }
-    return () => {
-      // Reset on unmount (which happens during hot reload)
-      isFirstRender = true;
-    };
+  const showBanner = useCallback((config) => {
+    setBannerConfig({
+      isVisible: true,
+      message: config.message,
+      backgroundColor: config.backgroundColor,
+    });
   }, []);
 
-  const showBanner = useCallback(() => {
-    // If banner is already visible, hide it first to trigger animation again
-    if (isVisible) {
-      setIsVisible(false);
-      setTimeout(() => setIsVisible(true), 100);
-    } else {
-      setIsVisible(true);
-    }
-  }, [isVisible]);
+  const hideBanner = useCallback(() => {
+    setBannerConfig((config) => ({ ...config, isVisible: false }));
+  }, []);
 
   return {
-    isVisible,
+    bannerConfig,
     showBanner,
+    hideBanner,
   };
 };

@@ -16,7 +16,7 @@ import { getLogs } from "../services/loggingService";
 
 const screenHeight = Dimensions.get("window").height;
 
-const LogViewerModal = ({ visible, onClose }) => {
+const LogViewerModal = ({ visible, onClose, logType }) => {
   const { theme } = useTheme();
   const [logs, setLogs] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -26,7 +26,7 @@ const LogViewerModal = ({ visible, onClose }) => {
     let interval;
     if (visible) {
       const fetchLogs = async () => {
-        const fetchedLogs = await getLogs();
+        const fetchedLogs = await getLogs(logType);
         setLogs(fetchedLogs);
       };
       fetchLogs();

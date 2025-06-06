@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "OBDApp",
-    "slug": "OBDApp",
+    "name": "Flux",
+    "slug": "Flux",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -25,6 +25,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_WIFI_STATE"
+      ],
       "edgeToEdgeEnabled": true,
       "splash": {
         "image": "./assets/splash.png",
@@ -39,7 +44,7 @@
       [
         "expo-sensors",
         {
-          "motionPermission": "Allow OBDApp to access your device motion."
+          "motionPermission": "Allow Flux to access your device motion."
         }
       ],
       [

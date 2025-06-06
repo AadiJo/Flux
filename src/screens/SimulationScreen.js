@@ -45,9 +45,9 @@ export const SimulationScreen = ({ onResetSplash }) => {
 
   useEffect(() => {
     if (isLogging) {
-      startLogging();
+      startLogging("sim");
     } else {
-      stopLogging();
+      stopLogging("sim");
     }
   }, [isLogging]);
 
@@ -70,7 +70,7 @@ export const SimulationScreen = ({ onResetSplash }) => {
 
   useEffect(() => {
     if (isLogging) {
-      logData({
+      logData("sim", {
         obd2Data,
         location: location?.coords,
         streetName,
@@ -120,7 +120,7 @@ export const SimulationScreen = ({ onResetSplash }) => {
         },
         {
           text: "OK",
-          onPress: () => clearLogs(),
+          onPress: () => clearLogs("sim"),
           style: "destructive",
         },
       ]
@@ -220,6 +220,7 @@ export const SimulationScreen = ({ onResetSplash }) => {
       <LogViewerModal
         visible={isModalVisible}
         onClose={() => setIsModalVisible(false)}
+        logType="sim"
       />
 
       <View

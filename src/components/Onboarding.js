@@ -101,7 +101,7 @@ export default function WelcomeScreen({ visible, onContinue }) {
             <MaterialCommunityIcons name="car" size={64} color="white" />
           </View>
           <Text style={[styles.title, { color: theme.text }]}>
-            Welcome to OBDApp
+            Welcome to Flux
           </Text>
           <Text style={[styles.subtitle, { color: theme.text }]}>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce

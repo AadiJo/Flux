@@ -6,6 +6,8 @@ export const AlertBanner = ({
   visible,
   message = "Refreshed!",
   duration = 2000,
+  onHide,
+  backgroundColor,
 }) => {
   const { theme } = useTheme();
   const translateY = useRef(new Animated.Value(-100)).current;
@@ -25,9 +27,17 @@ export const AlertBanner = ({
           useNativeDriver: true,
           bounciness: 8,
         }),
-      ]).start();
+      ]).start(() => {
+        if (onHide) {
+          onHide();
+        }
+      });
     }
-  }, [visible, duration]);
+  }, [visible, duration, onHide]);
+
+  if (!visible) {
+    return null;
+  }
 
   return (
     <Animated.View
@@ -38,7 +48,12 @@ export const AlertBanner = ({
         },
       ]}
     >
-      <View style={[styles.content, { backgroundColor: theme.primary }]}>
+      <View
+        style={[
+          styles.content,
+          { backgroundColor: backgroundColor || theme.primary },
+        ]}
+      >
         <Text style={styles.text}>{message}</Text>
       </View>
     </Animated.View>

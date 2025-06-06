@@ -1,38 +1,88 @@
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const logFileUri = FileSystem.documentDirectory + "session_logs.jsonl";
+const LOGGING_ACTIVE_KEY = "logging_active_";
 
-let isLoggingActive = false;
+const loggers = {
+  sim: {
+    uri: FileSystem.documentDirectory + "sim_session_logs.jsonl",
+    isLoggingActive: false,
+  },
+  real: {
+    uri: FileSystem.documentDirectory + "real_session_logs.jsonl",
+    isLoggingActive: false,
+  },
+};
+
+// Initialize logging state from AsyncStorage
+export const initializeLogging = async () => {
+  for (const logType in loggers) {
+    try {
+      const storedState = await AsyncStorage.getItem(
+        `${LOGGING_ACTIVE_KEY}${logType}`
+      );
+      if (storedState !== null) {
+        loggers[logType].isLoggingActive = JSON.parse(storedState);
+        console.log(
+          `Logging state for ${logType} restored to: ${loggers[logType].isLoggingActive}`
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Failed to initialize logging state for ${logType}:`,
+        error
+      );
+    }
+  }
+};
 
 // Function to start a new logging session
-export const startLogging = async () => {
+export const startLogging = async (logType) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return;
+  }
+  const logger = loggers[logType];
+  logger.isLoggingActive = true;
   try {
-    // Optional: Clear previous logs by deleting the file
-    await FileSystem.deleteAsync(logFileUri, { idempotent: true });
-    console.log("Log file cleared for new session.");
-    // Create an empty file to start with
-    await FileSystem.writeAsStringAsync(logFileUri, "", {
-      encoding: FileSystem.EncodingType.UTF8,
-    });
-    isLoggingActive = true;
-    console.log("Logging started.");
+    await AsyncStorage.setItem(
+      `${LOGGING_ACTIVE_KEY}${logType}`,
+      JSON.stringify(true)
+    );
+    console.log(`Logging started and state saved for ${logType}.`);
   } catch (error) {
-    console.error("Failed to start logging:", error);
-    isLoggingActive = false;
+    console.error(`Failed to save logging state for ${logType}:`, error);
   }
 };
 
 // Function to stop the logging session
-export const stopLogging = () => {
-  if (isLoggingActive) {
-    isLoggingActive = false;
-    console.log("Logging stopped.");
+export const stopLogging = async (logType) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return;
+  }
+  const logger = loggers[logType];
+  logger.isLoggingActive = false;
+  try {
+    await AsyncStorage.setItem(
+      `${LOGGING_ACTIVE_KEY}${logType}`,
+      JSON.stringify(false)
+    );
+    console.log(`Logging stopped and state saved for ${logType}.`);
+  } catch (error) {
+    console.error(`Failed to save logging state for ${logType}:`, error);
   }
 };
 
 // Function to log data
-export const logData = async (data) => {
-  if (!isLoggingActive) {
+export const logData = async (logType, data) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return;
+  }
+  const logger = loggers[logType];
+
+  if (!logger.isLoggingActive) {
     return;
   }
 
@@ -44,9 +94,9 @@ export const logData = async (data) => {
   try {
     // Read existing content
     let existingContent = "";
-    const fileInfo = await FileSystem.getInfoAsync(logFileUri);
+    const fileInfo = await FileSystem.getInfoAsync(logger.uri);
     if (fileInfo.exists) {
-      existingContent = await FileSystem.readAsStringAsync(logFileUri, {
+      existingContent = await FileSystem.readAsStringAsync(logger.uri, {
         encoding: FileSystem.EncodingType.UTF8,
       });
     }
@@ -55,36 +105,47 @@ export const logData = async (data) => {
     const newContent = existingContent + JSON.stringify(logEntry) + "\n";
 
     // Write the updated content back to the file
-    await FileSystem.writeAsStringAsync(logFileUri, newContent, {
+    await FileSystem.writeAsStringAsync(logger.uri, newContent, {
       encoding: FileSystem.EncodingType.UTF8,
     });
   } catch (error) {
-    console.error("Failed to write to log file:", error);
+    console.error(`Failed to write to log file for ${logType}:`, error);
   }
 };
 
 /**
  * Deletes the log file from the device.
  */
-export const clearLogs = async () => {
+export const clearLogs = async (logType) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return;
+  }
+  const logger = loggers[logType];
   try {
-    await FileSystem.deleteAsync(logFileUri, { idempotent: true });
-    console.log("Log file deleted.");
+    await FileSystem.deleteAsync(logger.uri, { idempotent: true });
+    console.log(`Log file for ${logType} deleted.`);
   } catch (error) {
-    console.error("Failed to delete log file:", error);
+    console.error(`Failed to delete log file for ${logType}:`, error);
   }
 };
 
 // Function to retrieve all logs
-export const getLogs = async () => {
+export const getLogs = async (logType) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return [];
+  }
+  const logger = loggers[logType];
+
   try {
-    const fileInfo = await FileSystem.getInfoAsync(logFileUri);
+    const fileInfo = await FileSystem.getInfoAsync(logger.uri);
     if (!fileInfo.exists) {
-      console.log("Log file does not exist yet.");
+      console.log(`Log file for ${logType} does not exist yet.`);
       return [];
     }
 
-    const fileContent = await FileSystem.readAsStringAsync(logFileUri, {
+    const fileContent = await FileSystem.readAsStringAsync(logger.uri, {
       encoding: FileSystem.EncodingType.UTF8,
     });
 
@@ -101,7 +162,7 @@ export const getLogs = async () => {
 
     return logEntries;
   } catch (error) {
-    console.error("Failed to read log file:", error);
+    console.error(`Failed to read log file for ${logType}:`, error);
     return [];
   }
 };

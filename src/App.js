@@ -7,6 +7,7 @@ import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
 import * as Location from "expo-location";
 import { LocationProvider } from "./contexts/LocationContext";
+import { initializeLogging } from "./services/loggingService";
 
 import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
@@ -27,7 +28,7 @@ const AppContent = () => {
   const [isAppReady, setIsAppReady] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [selectedMode, setSelectedMode] = useState("home");
-  const { isVisible, showBanner } = useAlertBanner();
+  const { bannerConfig, showBanner, hideBanner } = useAlertBanner();
   const {
     selectedNetwork,
     isWifiModalVisible,
@@ -42,6 +43,7 @@ const AppContent = () => {
   useEffect(() => {
     async function prepare() {
       try {
+        await initializeLogging();
         // Get location permission and initial location while loading
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === "granted") {
@@ -147,7 +149,12 @@ const AppContent = () => {
   return (
     <LocationProvider location={location} streetName={streetName}>
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <AlertBanner visible={isVisible} />
+        <AlertBanner
+          visible={bannerConfig.isVisible}
+          message={bannerConfig.message}
+          backgroundColor={bannerConfig.backgroundColor}
+          onHide={hideBanner}
+        />
         <WelcomeScreen visible={hasSeenWelcome} onContinue={handleContinue} />
 
         <View
@@ -165,6 +172,7 @@ const AppContent = () => {
               onOpenWifiModal={() => setIsWifiModalVisible(true)}
               selectedNetwork={selectedNetwork}
               onResetSplash={handleResetSplash}
+              showBanner={showBanner}
             />
           )}
           {selectedMode === "simulation" && (
