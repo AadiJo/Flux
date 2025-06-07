@@ -42,6 +42,6 @@ With these features, the finished product will empower parents to coach their te
 ## Bugs / Feature Improvements
 
 - ✅ Async location processing
-- Event pin markers
+- ✅ Event pin markers
 - Bluetooth connection (instead of wifi)
 - Accounts / Data sharing
