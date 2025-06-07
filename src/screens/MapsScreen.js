@@ -10,31 +10,10 @@ import {
 } from "react-native";
 import MapView, { PROVIDER_DEFAULT, Marker, Callout } from "react-native-maps";
 import { useTheme } from "../contexts/ThemeContext";
-import * as Location from "expo-location";
-import { getRoadEndpointsFromOSM } from "../services/mapService";
 
-// Helper function to style bulleted text
-const renderBulletedText = (text, highlightColor, theme) => {
-  const parts = text.split(" ");
-  if (parts.length >= 2) {
-    return (
-      <Text style={[styles.calloutText, { color: theme.text }]}>        
-        {parts[0]} <Text style={{ color: highlightColor }}>{parts[1]}</Text>
-        {parts.length > 2 ? " " + parts.slice(2).join(" ") : ""}
-      </Text>
-    );
-  }
-  return (
-    <Text style={[styles.calloutText, { color: highlightColor }]}>{text}</Text>
-  );
-};
-
-export const MapsScreen = ({ appLocation, appStreetName }) => {
+export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
   const { theme, isDark } = useTheme();
   const mapRef = useRef(null);
-  const [roadStartCoords, setRoadStartCoords] = useState(null);
-  const [roadEndCoords, setRoadEndCoords] = useState(null);
-  const [mapStatusMessage, setMapStatusMessage] = useState("");
   const [region, setRegion] = useState(null);
 
   // Update map region state
@@ -56,103 +35,15 @@ export const MapsScreen = ({ appLocation, appStreetName }) => {
     }
   }, [region]);
 
-  // Fetch road endpoints from OSM
-  const fetchRoadEndpoints = useCallback(
-    async (latitude, longitude, streetName) => {
-      if (
-        !streetName ||
-        [
-          "Unknown Street",
-          "Street name not available",
-          "Unnamed Road",
-          "Initializing...",
-          "Permission denied",
-          "Could not retrieve location.",
-          "Error getting location",
-        ].includes(streetName)
-      ) {
-        console.log(
-          `[MapsScreen] Skipping fetch for invalid street name: '${streetName}'`
-        );
-        setMapStatusMessage("Street information not available to pin ends.");
-        setRoadStartCoords(null);
-        setRoadEndCoords(null);
-        return;
-      }
-
-      try {
-        setMapStatusMessage("Finding road ends...");
-        console.log(
-          `[MapsScreen] Fetching endpoints for street: '${streetName}' at (${latitude}, ${longitude})`
-        );
-
-        const timeoutMs = 10000;
-        const roadEndpoints = await Promise.race([
-          getRoadEndpointsFromOSM(latitude, longitude, streetName),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("Timeout getting road ends")), timeoutMs)
-          ),
-        ]).catch((error) => {
-          console.warn(
-            `[MapsScreen] Timeout or error fetching endpoints: ${error.message}`
-          );
-          return null;
-        });
-
-        if (roadEndpoints) {
-          console.log(
-            `[MapsScreen] Retrieved endpoints: start=${JSON.stringify(
-              roadEndpoints.start
-            )}, end=${JSON.stringify(roadEndpoints.end)}`
-          );
-          setRoadStartCoords(roadEndpoints.start);
-          setRoadEndCoords(roadEndpoints.end);
-          setMapStatusMessage("");
-        } else {
-          console.log("[MapsScreen] No endpoints available for this street.");
-          setMapStatusMessage("Road ends not available for this street.");
-          setRoadStartCoords(null);
-          setRoadEndCoords(null);
-        }
-      } catch (error) {
-        console.error("[MapsScreen] Error fetching road endpoints:", error);
-        setMapStatusMessage("Could not load road information due to an error.");
-        setRoadStartCoords(null);
-        setRoadEndCoords(null);
-      }
-    },
-    []
-  );
-
   // Respond to updates in location or street name
   useEffect(() => {
-    console.log(
-      `[MapsScreen] effect triggered. appLocation=${
-        appLocation ? 'present' : 'none'
-      }, appStreetName='${appStreetName}'`
-    );
-
     if (!appLocation?.coords) {
-      setMapStatusMessage("Waiting for location from app...");
-      setRoadStartCoords(null);
-      setRoadEndCoords(null);
       return;
     }
 
     const { latitude, longitude } = appLocation.coords;
     updateMapRegion(latitude, longitude);
-
-    if (appStreetName) {
-      fetchRoadEndpoints(latitude, longitude, appStreetName);
-    } else {
-      console.log(
-        `[MapsScreen] No street name provided; skipping endpoint fetch.`
-      );
-      setRoadStartCoords(null);
-      setRoadEndCoords(null);
-      setMapStatusMessage("Current street not suitable for pinning ends.");
-    }
-  }, [appLocation, appStreetName, updateMapRegion, fetchRoadEndpoints]);
+  }, [appLocation, updateMapRegion]);
 
   if (!appLocation?.coords) {
     return (
@@ -160,7 +51,9 @@ export const MapsScreen = ({ appLocation, appStreetName }) => {
         style={[styles.mapWrapper, { backgroundColor: theme.background }]}
       >
         <View style={styles.loadingContainer}>
-          <Text style={[styles.streetName, { color: theme.text }]}>Getting location...</Text>
+          <Text style={[styles.streetName, { color: theme.text }]}>
+            Getting location...
+          </Text>
         </View>
       </SafeAreaView>
     );
@@ -184,36 +77,35 @@ export const MapsScreen = ({ appLocation, appStreetName }) => {
           showsCompass={false}
           mapPadding={{ bottom: -80 }}
         >
-          {roadStartCoords && (
+          {speedingPins?.map((pin, index) => (
             <Marker
-              identifier="start"
-              coordinate={roadStartCoords}
+              key={index}
+              coordinate={{
+                latitude: pin.latitude,
+                longitude: pin.longitude,
+              }}
               pinColor="red"
             >
-              <Callout tooltip style={styles.calloutContainer}>
-                <View style={[styles.calloutView, { backgroundColor: theme.card }]}>                  
-                  {renderBulletedText("• Start Point 1", "red", theme)}
-                  {renderBulletedText("• Start Point 2", "red", theme)}
-                  {renderBulletedText("• Start Point 3", "red", theme)}
+              <Callout>
+                <View
+                  style={[styles.calloutView, { backgroundColor: theme.card }]}
+                >
+                  <Text style={{ color: theme.text, fontWeight: "bold" }}>
+                    Speeding Details
+                  </Text>
+                  <Text style={{ color: theme.text, marginTop: 5 }}>
+                    Speed: {Math.round(pin.speed)} mph
+                  </Text>
+                  <Text style={{ color: theme.text }}>
+                    Limit: {Math.round(pin.speedLimit)} mph
+                  </Text>
+                  <Text style={{ color: theme.text }}>
+                    Over by: {Math.round(pin.speed - pin.speedLimit)} mph
+                  </Text>
                 </View>
               </Callout>
             </Marker>
-          )}
-          {roadEndCoords && (
-            <Marker
-              identifier="end"
-              coordinate={roadEndCoords}
-              pinColor="green"
-            >
-              <Callout tooltip style={styles.calloutContainer}>
-                <View style={[styles.calloutView, { backgroundColor: theme.card }]}>                  
-                  {renderBulletedText("• End Point 1", "green", theme)}
-                  {renderBulletedText("• End Point 2", "green", theme)}
-                  {renderBulletedText("• End Point 3", "green", theme)}
-                </View>
-              </Callout>
-            </Marker>
-          )}
+          ))}
         </MapView>
 
         <View
@@ -221,18 +113,18 @@ export const MapsScreen = ({ appLocation, appStreetName }) => {
             styles.banner,
             {
               backgroundColor: theme.card,
-              marginTop: Platform.OS === "ios" ? 60 : StatusBar.currentHeight + 10,
+              marginTop:
+                Platform.OS === "ios" ? 60 : StatusBar.currentHeight + 10,
             },
           ]}
         >
-          <Text style={[styles.streetName, { color: theme.text }]} numberOfLines={1} ellipsizeMode="tail">
+          <Text
+            style={[styles.streetName, { color: theme.text }]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
             {appStreetName || "Street unavailable"}
           </Text>
-          {mapStatusMessage ? (
-            <Text style={[styles.statusMessage, { color: theme.textMuted || theme.text }]}>
-              {mapStatusMessage}
-            </Text>
-          ) : null}
         </View>
       </View>
     </>
@@ -270,9 +162,23 @@ const styles = StyleSheet.create({
     margin: 8,
   },
   streetName: { fontSize: 16, fontWeight: "600", textAlign: "center" },
-  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight + 10 },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight + 10,
+  },
   calloutContainer: { width: 150 },
-  calloutView: { padding: 10, borderRadius: 10, alignItems: "center", shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.22, shadowRadius: 2.22, elevation: 3 },
+  calloutView: {
+    padding: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
+    elevation: 3,
+  },
   calloutText: { fontSize: 14, marginBottom: 2, textAlign: "center" },
   statusMessage: { fontSize: 12, textAlign: "center", marginTop: 4 },
 });

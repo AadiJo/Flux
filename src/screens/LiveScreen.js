@@ -20,6 +20,7 @@ import {
   stopLogging,
   logData,
   clearLogs,
+  getLogs,
 } from "../services/loggingService";
 import { getSpeedLimit } from "../services/mapService";
 import { fetchWicanData } from "../services/wicanService";
@@ -27,11 +28,42 @@ import LogViewerModal from "../components/LogViewerModal";
 
 const screenWidth = Dimensions.get("window").width;
 
+const getDistanceInFeet = (coord1, coord2) => {
+  if (!coord1 || !coord2) return Infinity;
+  const lat1 = coord1.latitude;
+  const lon1 = coord1.longitude;
+  const lat2 = coord2.latitude;
+  const lon2 = coord2.longitude;
+
+  if (
+    lat1 === undefined ||
+    lon1 === undefined ||
+    lat2 === undefined ||
+    lon2 === undefined
+  )
+    return Infinity;
+
+  const R = 6371e3; // metres
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  const distanceInMeters = R * c;
+  return distanceInMeters * 3.28084;
+};
+
 export const LiveScreen = ({
   onOpenWifiModal,
   selectedNetwork,
   onResetSplash,
   showBanner,
+  setSpeedingPins,
 }) => {
   const { theme, isDark } = useTheme();
   const { location, streetName } = useLocation();
@@ -109,7 +141,9 @@ export const LiveScreen = ({
     if (isLogging) {
       startLogging("real");
     } else {
-      stopLogging("real");
+      stopLogging("real").then(() => {
+        analyzeLogs();
+      });
     }
   }, [isLogging]);
 
@@ -203,6 +237,45 @@ export const LiveScreen = ({
     }
   };
 
+  const analyzeLogs = async () => {
+    const logs = await getLogs("real");
+    const speedingLogs = logs.filter((log) => {
+      const speed = log.obd2Data?.speed;
+      const limit = log.speedLimit;
+      return speed && limit && log.location && Math.abs(speed - limit) > 5;
+    });
+
+    const uniquePins = [];
+    for (const log of speedingLogs) {
+      const newPin = {
+        latitude: log.location.latitude,
+        longitude: log.location.longitude,
+        speed: log.obd2Data.speed,
+        speedLimit: log.speedLimit,
+      };
+
+      let isTooClose = false;
+      for (const existingPin of uniquePins) {
+        if (getDistanceInFeet(newPin, existingPin) < 100) {
+          isTooClose = true;
+          break;
+        }
+      }
+
+      if (!isTooClose) {
+        uniquePins.push(newPin);
+      }
+    }
+
+    if (uniquePins.length > 0) {
+      setSpeedingPins(uniquePins);
+      Alert.alert(
+        "Speeding Detected",
+        `${uniquePins.length} speeding events have been marked on the map.`
+      );
+    }
+  };
+
   const handleSimulationToggle = (value) => {
     setIsWicanSimulated(value);
   };
@@ -286,6 +359,23 @@ export const LiveScreen = ({
               color={theme.primary}
             />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.headerButton} onPress={viewLogs}>
+            <MaterialCommunityIcons
+              name="file-document-outline"
+              size={24}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleClearLogs}
+          >
+            <MaterialCommunityIcons
+              name="trash-can-outline"
+              size={24}
+              color={theme.error}
+            />
+          </TouchableOpacity>
           {isDataAvailable && (
             <>
               <TouchableOpacity
@@ -306,23 +396,6 @@ export const LiveScreen = ({
                   name={isLogging ? "pause-circle" : "play-circle"}
                   size={24}
                   color={isLogging ? theme.error : theme.primary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.headerButton} onPress={viewLogs}>
-                <MaterialCommunityIcons
-                  name="file-document-outline"
-                  size={24}
-                  color={theme.primary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.headerButton}
-                onPress={handleClearLogs}
-              >
-                <MaterialCommunityIcons
-                  name="trash-can-outline"
-                  size={24}
-                  color={theme.error}
                 />
               </TouchableOpacity>
             </>

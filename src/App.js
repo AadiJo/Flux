@@ -39,6 +39,7 @@ const AppContent = () => {
   // Add location state
   const [location, setLocation] = useState(null);
   const [streetName, setStreetName] = useState(null);
+  const [speedingPins, setSpeedingPins] = useState([]);
 
   useEffect(() => {
     async function prepare() {
@@ -173,13 +174,18 @@ const AppContent = () => {
               selectedNetwork={selectedNetwork}
               onResetSplash={handleResetSplash}
               showBanner={showBanner}
+              setSpeedingPins={setSpeedingPins}
             />
           )}
           {selectedMode === "simulation" && (
             <SimulationScreen onResetSplash={handleResetSplash} />
           )}
           {selectedMode === "maps" && (
-            <MapsScreen appLocation={location} appStreetName={streetName} />
+            <MapsScreen
+              appLocation={location}
+              appStreetName={streetName}
+              speedingPins={speedingPins}
+            />
           )}
         </View>
 

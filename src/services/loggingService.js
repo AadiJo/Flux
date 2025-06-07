@@ -11,6 +11,7 @@ const loggers = {
   real: {
     uri: FileSystem.documentDirectory + "real_session_logs.jsonl",
     isLoggingActive: false,
+    lastSpeed: null,
   },
 };
 
@@ -86,6 +87,15 @@ export const logData = async (logType, data) => {
     return;
   }
 
+  // Don't log if speed is 0 and the last logged speed was also 0
+  if (
+    logType === "real" &&
+    data.obd2Data?.speed === 0 &&
+    logger.lastSpeed === 0
+  ) {
+    return;
+  }
+
   const logEntry = {
     timestamp: new Date().toISOString(),
     ...data,
@@ -108,6 +118,11 @@ export const logData = async (logType, data) => {
     await FileSystem.writeAsStringAsync(logger.uri, newContent, {
       encoding: FileSystem.EncodingType.UTF8,
     });
+
+    // Update last logged speed
+    if (logType === "real" && data.obd2Data) {
+      logger.lastSpeed = data.obd2Data.speed;
+    }
   } catch (error) {
     console.error(`Failed to write to log file for ${logType}:`, error);
   }
@@ -125,6 +140,9 @@ export const clearLogs = async (logType) => {
   try {
     await FileSystem.deleteAsync(logger.uri, { idempotent: true });
     console.log(`Log file for ${logType} deleted.`);
+    if (logType === "real") {
+      logger.lastSpeed = null;
+    }
   } catch (error) {
     console.error(`Failed to delete log file for ${logType}:`, error);
   }
