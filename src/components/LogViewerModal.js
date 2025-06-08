@@ -104,7 +104,7 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
           {location?.longitude?.toFixed(4)}
         </Text>
         <Text style={[styles.logText, { color: theme.textSecondary }]}>
-          Street: {streetName}
+          Street: {streetName || "N/A"}
         </Text>
         <Text style={[styles.logText, { color: theme.textSecondary }]}>
           Speed Limit: {speedLimit ? `${speedLimit.toFixed(2)} mph` : "N/A"}
