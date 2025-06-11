@@ -43,5 +43,6 @@ With these features, the finished product will empower parents to coach their te
 
 - ✅ Async location processing
 - ✅ Event pin markers
+- Routes (trip grouping)
 - Bluetooth connection (instead of wifi)
 - Accounts / Data sharing
