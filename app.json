@@ -10,20 +10,23 @@
     "splash": {
       "image": "./src/assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#00202d"
     },
     "ios": {
       "supportsTablet": true,
       "splash": {
         "image": "src/assets/splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#00202ds"
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Flux needs access to track your speed and location."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "src/assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "src/assets/icon.png",
+        "backgroundColor": "#00202d"
       },
       "permissions": [
         "ACCESS_FINE_LOCATION",
@@ -34,7 +37,7 @@
       "splash": {
         "image": "src/assets/splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#00202d"
       }
     },
     "web": {
@@ -52,7 +55,7 @@
         {
           "image": "src/assets/splash.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#00202d"
         }
       ]
     ]
