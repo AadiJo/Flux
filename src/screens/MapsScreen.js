@@ -8,15 +8,13 @@ import {
   Dimensions,
   SafeAreaView,
 } from "react-native";
-import MapView, { PROVIDER_DEFAULT, Marker } from "react-native-maps";
+import MapView, { PROVIDER_DEFAULT, Marker, Callout } from "react-native-maps";
 import { useTheme } from "../contexts/ThemeContext";
 
 export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
   const { theme, isDark } = useTheme();
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
-  const [selectedPin, setSelectedPin] = useState(null);
-  const latestPin = speedingPins?.[speedingPins.length - 1];
 
   // Update map region state
   const updateMapRegion = useCallback((latitude, longitude) => {
@@ -77,8 +75,6 @@ export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
           showsUserLocation
           showsMyLocationButton
           showsCompass={false}
-          mapPadding={{ bottom: -80 }}
-          onPress={() => setSelectedPin(null)}
         >
           {speedingPins?.map((pin, index) => (
             <Marker
@@ -87,12 +83,33 @@ export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
                 latitude: pin.latitude,
                 longitude: pin.longitude,
               }}
-              pinColor={selectedPin === pin ? "blue" : "red"}
-              onPress={(e) => {
-                e.stopPropagation();
-                setSelectedPin(pin);
-              }}
-            />
+              pinColor="red"
+            >
+              <Callout tooltip>
+                <View
+                  style={[
+                    styles.calloutContainer,
+                    { backgroundColor: theme.card },
+                  ]}
+                >
+                  <Text style={[styles.speedingHeader, { color: theme.text }]}>
+                    Speeding Details
+                  </Text>
+                  <Text style={[styles.speedingInfo, { color: theme.text }]}>
+                    Speed: {Math.round(pin.speed)} mph | Limit:{" "}
+                    {Math.round(pin.speedLimit)} mph
+                  </Text>
+                  <Text
+                    style={[
+                      styles.speedingInfo,
+                      { color: theme.text, fontWeight: "bold" },
+                    ]}
+                  >
+                    Over by: {Math.round(pin.speed - pin.speedLimit)} mph
+                  </Text>
+                </View>
+              </Callout>
+            </Marker>
           ))}
         </MapView>
 
@@ -113,31 +130,6 @@ export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
           >
             {appStreetName || "Street unavailable"}
           </Text>
-          {selectedPin && (
-            <View
-              style={[
-                styles.speedingInfoContainer,
-                { borderTopColor: isDark ? "#444" : "#ddd" },
-              ]}
-            >
-              <Text style={[styles.speedingHeader, { color: theme.text }]}>
-                Speeding Details
-              </Text>
-              <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                Speed: {Math.round(selectedPin.speed)} mph | Limit:{" "}
-                {Math.round(selectedPin.speedLimit)} mph
-              </Text>
-              <Text
-                style={[
-                  styles.speedingInfo,
-                  { color: theme.text, fontWeight: "bold" },
-                ]}
-              >
-                Over by:{" "}
-                {Math.round(selectedPin.speed - selectedPin.speedLimit)} mph
-              </Text>
-            </View>
-          )}
         </View>
       </View>
     </>
@@ -181,19 +173,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: Platform.OS === "ios" ? 50 : StatusBar.currentHeight + 10,
   },
-  speedingInfoContainer: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
+  calloutContainer: {
+    borderRadius: 12,
+    padding: 12,
   },
   speedingHeader: {
     fontSize: 14,
     fontWeight: "bold",
-    textAlign: "center",
     marginBottom: 5,
   },
   speedingInfo: {
     fontSize: 14,
-    textAlign: "center",
   },
 });
