@@ -13,7 +13,7 @@ import { SettingsMenu } from "../components/SettingsMenu";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
 
-export const HomeScreen = () => {
+export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
   const { theme } = useTheme();
   const { userType } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -122,6 +122,7 @@ export const HomeScreen = () => {
       <SettingsMenu
         visible={showSettingsMenu}
         onClose={() => setShowSettingsMenu(false)}
+        updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
       />
 
       <View style={[styles.container, { backgroundColor: theme.background }]}>

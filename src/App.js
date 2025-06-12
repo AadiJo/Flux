@@ -8,7 +8,7 @@ import { UserProvider } from "./contexts/UserContext";
 import { SettingsProvider } from "./contexts/SettingsContext";
 import * as Location from "expo-location";
 import { LocationProvider } from "./contexts/LocationContext";
-import { initializeLogging } from "./services/loggingService";
+import { initializeLogging, getLogs } from "./services/loggingService";
 
 import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
@@ -42,10 +42,56 @@ const AppContent = () => {
   const [streetName, setStreetName] = useState(null);
   const [speedingPins, setSpeedingPins] = useState([]);
 
+  const updateSpeedingPinsFromLogs = async () => {
+    const simLogs = await getLogs("sim");
+    const realLogs = await getLogs("real");
+    const allLogs = [...simLogs, ...realLogs];
+
+    const allSpeedingEvents = allLogs
+      .filter((log) => {
+        const speed = log.obd2Data?.speed;
+        const speedLimit = log.speedLimit;
+        return (
+          typeof speed === "number" &&
+          typeof speedLimit === "number" &&
+          speed > speedLimit &&
+          log.location
+        );
+      })
+      .map((log) => ({
+        latitude: log.location.latitude,
+        longitude: log.location.longitude,
+        speed: log.obd2Data.speed,
+        speedLimit: log.speedLimit,
+      }));
+
+    // Group events by location (rounded to ~100m)
+    const groupedEvents = allSpeedingEvents.reduce((acc, event) => {
+      const lat = event.latitude.toFixed(3);
+      const lon = event.longitude.toFixed(3);
+      const key = `${lat},${lon}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(event);
+      return acc;
+    }, {});
+
+    // For each group, find the event with the highest speed
+    const representativePins = Object.values(groupedEvents).map((group) => {
+      return group.reduce((max, current) =>
+        current.speed > max.speed ? current : max
+      );
+    });
+
+    setSpeedingPins(representativePins);
+  };
+
   useEffect(() => {
     async function prepare() {
       try {
         await initializeLogging();
+        await updateSpeedingPinsFromLogs();
         // Get location permission and initial location while loading
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status === "granted") {
@@ -165,7 +211,11 @@ const AppContent = () => {
             { backgroundColor: theme.background },
           ]}
         >
-          {selectedMode === "home" && <HomeScreen />}
+          {selectedMode === "home" && (
+            <HomeScreen
+              updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
+            />
+          )}
           {selectedMode === "motion" && (
             <MotionScreen onResetSplash={handleResetSplash} />
           )}

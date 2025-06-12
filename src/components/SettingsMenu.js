@@ -7,13 +7,33 @@ import {
   StyleSheet,
   Animated,
   TextInput,
+  Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
+import * as FileSystem from "expo-file-system";
+import * as DocumentPicker from "expo-document-picker";
+import * as Sharing from "expo-sharing";
 
-export const SettingsMenu = ({ visible, onClose }) => {
+const SettingButton = ({ label, icon, onPress, theme }) => (
+  <TouchableOpacity
+    style={[styles.settingButton, { backgroundColor: theme.background }]}
+    onPress={onPress}
+  >
+    <MaterialCommunityIcons name={icon} size={24} color={theme.primary} />
+    <Text style={[styles.settingButtonLabel, { color: theme.text }]}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
+
+export const SettingsMenu = ({
+  visible,
+  onClose,
+  updateSpeedingPinsFromLogs,
+}) => {
   const { theme } = useTheme();
   const { speedingThreshold, updateSpeedingThreshold } = useSettings();
   const [showingModal, setShowingModal] = useState(visible);
@@ -21,6 +41,9 @@ export const SettingsMenu = ({ visible, onClose }) => {
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const menuScale = useRef(new Animated.Value(0.95)).current;
+
+  const simLogUri = FileSystem.documentDirectory + "sim_session_logs.jsonl";
+  const realLogUri = FileSystem.documentDirectory + "real_session_logs.jsonl";
 
   useEffect(() => {
     if (visible) {
@@ -54,6 +77,51 @@ export const SettingsMenu = ({ visible, onClose }) => {
       });
     }
   }, [visible, showingModal, overlayOpacity, menuScale, speedingThreshold]);
+
+  const handleExport = async (logType) => {
+    const uri = logType === "sim" ? simLogUri : realLogUri;
+    const logName =
+      logType === "sim" ? "sim_session_logs.jsonl" : "real_session_logs.jsonl";
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        Alert.alert("Export Error", `Log file ${logName} does not exist.`);
+        return;
+      }
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error("Error exporting log:", error);
+      Alert.alert("Export Error", "Could not export the log file.");
+    }
+  };
+
+  const handleImport = async (logType) => {
+    const uri = logType === "sim" ? simLogUri : realLogUri;
+    const logName =
+      logType === "sim" ? "sim_session_logs.jsonl" : "real_session_logs.jsonl";
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "*/*",
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const pickedUri = result.assets[0].uri;
+        await FileSystem.copyAsync({
+          from: pickedUri,
+          to: uri,
+        });
+        Alert.alert(
+          "Import Successful",
+          `Log file ${logName} has been imported.`,
+          [{ text: "OK", onPress: () => updateSpeedingPinsFromLogs() }]
+        );
+      }
+    } catch (error) {
+      console.error("Error importing log:", error);
+      Alert.alert("Import Error", "Could not import the log file.");
+    }
+  };
 
   const handleIncrement = () => {
     setLocalThreshold((prev) => prev + 1);
@@ -140,6 +208,35 @@ export const SettingsMenu = ({ visible, onClose }) => {
                 </TouchableOpacity>
               </View>
             </View>
+            <View style={styles.separator} />
+            <View style={styles.logActions}>
+              <SettingButton
+                label="Import Sim"
+                icon="file-import-outline"
+                onPress={() => handleImport("sim")}
+                theme={theme}
+              />
+              <SettingButton
+                label="Export Sim"
+                icon="file-export-outline"
+                onPress={() => handleExport("sim")}
+                theme={theme}
+              />
+            </View>
+            <View style={styles.logActions}>
+              <SettingButton
+                label="Import Real"
+                icon="file-import-outline"
+                onPress={() => handleImport("real")}
+                theme={theme}
+              />
+              <SettingButton
+                label="Export Real"
+                icon="file-export-outline"
+                onPress={() => handleExport("real")}
+                theme={theme}
+              />
+            </View>
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={[styles.closeButtonText, { color: theme.primary }]}>
                 Done
@@ -206,5 +303,26 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 18,
     fontWeight: "600",
+  },
+  separator: {
+    height: 1,
+    backgroundColor: "#ccc",
+    marginVertical: 15,
+  },
+  logActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginBottom: 15,
+    gap: 30,
+  },
+  settingButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 10,
+    borderRadius: 8,
+  },
+  settingButtonLabel: {
+    marginLeft: 10,
+    fontSize: 16,
   },
 });
