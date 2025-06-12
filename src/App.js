@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
+import { SettingsProvider } from "./contexts/SettingsContext";
 import * as Location from "expo-location";
 import { LocationProvider } from "./contexts/LocationContext";
 import { initializeLogging } from "./services/loggingService";
@@ -345,7 +346,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <UserProvider>
-        <AppContent />
+        <SettingsProvider>
+          <AppContent />
+        </SettingsProvider>
       </UserProvider>
     </ThemeProvider>
   );

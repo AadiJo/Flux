@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
+import { useSettings } from "../contexts/SettingsContext";
 import NetInfo from "@react-native-community/netinfo";
 import { LineChart } from "react-native-chart-kit";
 import { MAX_SPEED_DATA_POINTS } from "../constants/chartConfig";
@@ -66,6 +67,7 @@ export const LiveScreen = ({
   setSpeedingPins,
 }) => {
   const { theme, isDark } = useTheme();
+  const { speedingThreshold } = useSettings();
   const { location, streetName } = useLocation();
   const [isWicanSimulated, setIsWicanSimulated] = useState(false);
   const [isWicanConnected, setIsWicanConnected] = useState(false);
@@ -83,6 +85,8 @@ export const LiveScreen = ({
   const dataInterval = useRef(null);
   const lastFetchFailed = useRef(false);
   const bannerShown = useRef(false);
+
+  console.log("Speeding threshold on LiveScreen:", speedingThreshold);
 
   const isConnected = isWicanSimulated || isWicanConnected;
   const isDataAvailable = isApiConnected || isWicanSimulated;
@@ -242,7 +246,12 @@ export const LiveScreen = ({
     const speedingLogs = logs.filter((log) => {
       const speed = log.obd2Data?.speed;
       const limit = log.speedLimit;
-      return speed && limit && log.location && Math.abs(speed - limit) > 5;
+      return (
+        speed &&
+        limit &&
+        log.location &&
+        Math.abs(speed - limit) > speedingThreshold
+      );
     });
 
     const uniquePins = [];

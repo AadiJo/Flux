@@ -9,6 +9,7 @@ import {
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
 import { UserSelectionMenu } from "../components/UserSelectionMenu";
+import { SettingsMenu } from "../components/SettingsMenu";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
 
@@ -16,6 +17,7 @@ export const HomeScreen = () => {
   const { theme } = useTheme();
   const { userType } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   // Mock data - would come from your actual data source
   const safetyScore = 86;
   const scoreBreakdown = [
@@ -100,12 +102,26 @@ export const HomeScreen = () => {
               </Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => setShowSettingsMenu(true)}
+          >
+            <MaterialCommunityIcons
+              name="cog"
+              size={24}
+              color={theme.primary}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
       <UserSelectionMenu
         visible={showUserMenu}
         onClose={() => setShowUserMenu(false)}
+      />
+      <SettingsMenu
+        visible={showSettingsMenu}
+        onClose={() => setShowSettingsMenu(false)}
       />
 
       <View style={[styles.container, { backgroundColor: theme.background }]}>
