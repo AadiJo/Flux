@@ -357,6 +357,13 @@ export const LiveScreen = ({
     },
   };
 
+  const getDotColor = (dataPoint) => {
+    if (speedLimit && dataPoint > speedLimit) {
+      return theme.error;
+    }
+    return speedChartData.datasets[0].color(1);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.background }]}>
@@ -503,6 +510,7 @@ export const LiveScreen = ({
               yLabelsOffset={5}
               paddingRight={35}
               paddingLeft={0}
+              getDotColor={getDotColor}
             />
             <Text
               style={[
