@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Modal,
   Animated,
+  Image,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
@@ -95,20 +96,20 @@ export default function WelcomeScreen({ visible, onContinue }) {
         ]}
       >
         <View style={styles.content}>
-          <View
-            style={[styles.iconContainer, { backgroundColor: theme.primary }]}
-          >
-            <MaterialCommunityIcons name="car" size={64} color="white" />
-          </View>
+          <Image
+            source={require("../assets/icon.png")}
+            style={{ width: 80, height: 80, borderRadius: 24 }}
+            resizeMode="cover"
+          />
           <Text style={[styles.title, { color: theme.text }]}>
             Welcome to Flux
           </Text>
           <Text style={[styles.subtitle, { color: theme.text }]}>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Fusce
-            varius, sapien nec ullamcorper gravida, turpis nunc blandit arcu, eu
-            fermentum risus nulla.
+            Track your driving habits in real time. Connect your car, monitor
+            trips, get safety scores, and discover insights to help you or your
+            teen become a smarter, safer, and more confident driver.
           </Text>
-          <View style={styles.peopleContainer}>
+          {/* <View style={styles.peopleContainer}>
             <MaterialCommunityIcons
               name="car-connected"
               size={32}
@@ -121,7 +122,7 @@ export default function WelcomeScreen({ visible, onContinue }) {
             <Text style={{ color: theme.primary }}>
               Sed dapibus risus hendrerit vitae mollis augue…
             </Text>
-          </Text>
+          </Text> */}
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.primary }]}
             onPress={handleContinue}
@@ -161,17 +162,13 @@ const styles = StyleSheet.create({
     padding: 28,
     alignItems: "center",
   },
-  iconContainer: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    marginTop: 8,
-  },
+  // Removed unused iconContainer style
   title: {
     fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 16,
+    marginTop: 16,
   },
   subtitle: {
     fontSize: 16,
@@ -181,7 +178,7 @@ const styles = StyleSheet.create({
   },
   peopleContainer: {
     marginBottom: 12,
-    marginTop: 8,
+    marginTop: -15,
     alignItems: "center",
   },
   privacy: {
