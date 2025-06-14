@@ -147,16 +147,15 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
             />
             <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
               Your Safety Score
-            </Text>
+            </Text>{" "}
             <Text style={[styles.scoreMessage, { color: theme.text }]}>
               Good driving! Keep it up.
             </Text>
-          </View>
-
+          </View>{" "}
           {/* Score Breakdown Grid */}
           <View style={styles.breakdownGrid}>
             {scoreBreakdown.map((item, index) => (
-              <View
+              <TouchableOpacity
                 key={index}
                 style={[
                   styles.breakdownItem,
@@ -165,6 +164,12 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
                     borderColor: theme.border,
                   },
                 ]}
+                onPress={() => {
+                  // TODO: Navigate to detailed view for this score category
+                  console.log(`Pressed ${item.title} score breakdown`);
+                }}
+                activeOpacity={0.8}
+                underlayColor={theme.background}
               >
                 <View
                   style={[
@@ -189,10 +194,9 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
                 >
                   {item.title}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
-
           {/* Recent Events Section */}
           <View style={styles.eventsSection}>
             <View style={styles.sectionHeader}>
