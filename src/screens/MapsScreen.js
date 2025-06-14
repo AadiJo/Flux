@@ -119,7 +119,8 @@ export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
             {
               backgroundColor: theme.card,
               marginTop:
-                Platform.OS === "ios" ? 60 : StatusBar.currentHeight + 10,
+                (Platform.OS === "ios" ? 60 : StatusBar.currentHeight + 10) +
+                60,
             },
           ]}
         >
@@ -139,17 +140,16 @@ export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
 const styles = StyleSheet.create({
   mapWrapper: {
     position: "absolute",
-    top: 0,
+    top: -60,
     left: 0,
     right: 0,
     bottom: 0,
-    width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height,
     zIndex: 0,
   },
   map: {
     width: "100%",
     height: "100%",
+    marginTop: 60,
   },
   banner: {
     position: "absolute",
