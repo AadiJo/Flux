@@ -76,41 +76,49 @@ export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
           showsMyLocationButton
           showsCompass={false}
         >
-          {speedingPins?.map((pin, index) => (
-            <Marker
-              key={index}
-              coordinate={{
-                latitude: pin.latitude,
-                longitude: pin.longitude,
-              }}
-              pinColor="red"
-            >
-              <Callout tooltip>
-                <View
-                  style={[
-                    styles.calloutContainer,
-                    { backgroundColor: theme.card },
-                  ]}
-                >
-                  <Text style={[styles.speedingHeader, { color: theme.text }]}>
-                    Speeding Details
-                  </Text>
-                  <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                    Speed: {Math.round(pin.speed)} mph | Limit:{" "}
-                    {Math.round(pin.speedLimit)} mph
-                  </Text>
-                  <Text
+          {speedingPins?.map((pin, index) => {
+            const speedDifference = Math.round(pin.speed - pin.speedLimit);
+
+            return (
+              <Marker
+                key={index}
+                coordinate={{
+                  latitude: pin.latitude,
+                  longitude: pin.longitude,
+                }}
+                pinColor="red"
+              >
+                <Callout tooltip>
+                  <View
                     style={[
-                      styles.speedingInfo,
-                      { color: theme.text, fontWeight: "bold" },
+                      styles.calloutContainer,
+                      { backgroundColor: theme.card },
                     ]}
                   >
-                    Over by: {Math.round(pin.speed - pin.speedLimit)} mph
-                  </Text>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
+                    <Text
+                      style={[styles.speedingHeader, { color: theme.text }]}
+                    >
+                      Speeding Details
+                    </Text>
+                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
+                      Speed: {Math.round(pin.speed)} mph | Limit:{" "}
+                      {Math.round(pin.speedLimit)} mph
+                    </Text>
+                    <Text
+                      style={[
+                        styles.speedingInfo,
+                        { color: theme.text, fontWeight: "bold" },
+                      ]}
+                    >
+                      {speedDifference >= 0
+                        ? `Over by: ${speedDifference} mph`
+                        : `Under by: ${Math.abs(speedDifference)} mph`}
+                    </Text>
+                  </View>
+                </Callout>
+              </Marker>
+            );
+          })}
         </MapView>
 
         <View
