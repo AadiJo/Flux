@@ -19,7 +19,7 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
   const { userType } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  // Mock data - would come from your actual data source
+
   const safetyScore = 86;
   const scoreBreakdown = [
     {
@@ -53,7 +53,6 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
       <ScrollView
         style={[styles.scrollView, { backgroundColor: theme.background }]}
       >
-        {/* Header Section */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity
@@ -77,7 +76,7 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
                     backgroundColor: theme.card,
                     borderColor: theme.primary,
                     shadowColor: theme.primary,
-                    minWidth: 90, // Width of longest type name ("Individual")
+                    minWidth: 90,
                     ...(theme.dark && {
                       shadowOpacity: 0.7,
                       shadowRadius: 10,
@@ -128,7 +127,6 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
         />
 
         <View style={[styles.container, { backgroundColor: theme.background }]}>
-          {/* Main Score Card */}
           <View
             style={[
               styles.scoreCard,
@@ -147,12 +145,12 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
             />
             <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
               Your Safety Score
-            </Text>{" "}
+            </Text>
             <Text style={[styles.scoreMessage, { color: theme.text }]}>
               Good driving! Keep it up.
             </Text>
-          </View>{" "}
-          {/* Score Breakdown Grid */}
+          </View>
+
           <View style={styles.breakdownGrid}>
             {scoreBreakdown.map((item, index) => (
               <TouchableOpacity
@@ -164,10 +162,9 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
                     borderColor: theme.border,
                   },
                 ]}
-                onPress={() => {
-                  // TODO: Navigate to detailed view for this score category
-                  console.log(`Pressed ${item.title} score breakdown`);
-                }}
+                onPress={() =>
+                  console.log(`Pressed ${item.title} score breakdown`)
+                }
                 activeOpacity={0.8}
                 underlayColor={theme.background}
               >
@@ -197,7 +194,7 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
               </TouchableOpacity>
             ))}
           </View>
-          {/* Recent Events Section */}
+
           <View style={styles.eventsSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>
@@ -277,7 +274,6 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
               </TouchableOpacity>
             ))}
 
-            {/* Improvement Section */}
             <TouchableOpacity
               style={[
                 styles.improvementCard,
@@ -324,7 +320,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     paddingTop: 0,
-    paddingBottom: 105, // Account for navbar height (65) + bottom margin (20) + extra padding
+    paddingBottom: 105,
   },
   scoreCard: {
     width: "100%",
@@ -350,6 +346,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#333",
     fontWeight: "500",
+    marginTop: 8,
   },
   breakdownGrid: {
     flexDirection: "row",
