@@ -231,7 +231,7 @@ export const LiveScreen = ({
           setIsApiConnected(false);
         }
         if (!lastFetchFailed.current) {
-          console.error(
+          console.log(
             "Failed to fetch WiCAN data. Further errors will be suppressed until connection is re-established.",
             error
           );
