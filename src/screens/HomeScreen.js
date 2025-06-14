@@ -5,6 +5,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  SafeAreaView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
@@ -48,243 +49,251 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
   ];
 
   return (
-    <ScrollView
-      style={[styles.scrollView, { backgroundColor: theme.background }]}
-    >
-      {/* Header Section */}
-      <View style={[styles.header, { backgroundColor: theme.background }]}>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => window.handleResetSplash()}
-          >
-            <MaterialCommunityIcons
-              name="refresh"
-              size={24}
-              color={theme.primary}
-            />
-          </TouchableOpacity>
-        </View>
-        <View style={styles.userSection}>
-          {userType && (
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+      <ScrollView
+        style={[styles.scrollView, { backgroundColor: theme.background }]}
+      >
+        {/* Header Section */}
+        <View style={[styles.header, { backgroundColor: theme.background }]}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity
-              onPress={() => setShowUserMenu(true)}
-              style={[
-                styles.userTypeBox,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.primary,
-                  shadowColor: theme.primary,
-                  minWidth: 90, // Width of longest type name ("Individual")
-                  ...(theme.dark && {
-                    shadowOpacity: 0.7,
-                    shadowRadius: 10,
-                    elevation: 10,
-                  }),
-                },
-              ]}
+              style={styles.headerButton}
+              onPress={() => window.handleResetSplash()}
             >
-              <Text
+              <MaterialCommunityIcons
+                name="refresh"
+                size={24}
+                color={theme.primary}
+              />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.userSection}>
+            {userType && (
+              <TouchableOpacity
+                onPress={() => setShowUserMenu(true)}
                 style={[
-                  styles.userTypeText,
+                  styles.userTypeBox,
                   {
-                    color: theme.text,
-                    textAlign: "center",
+                    backgroundColor: theme.card,
+                    borderColor: theme.primary,
+                    shadowColor: theme.primary,
+                    minWidth: 90, // Width of longest type name ("Individual")
                     ...(theme.dark && {
-                      textShadowColor: theme.primary,
-                      textShadowOffset: { width: 0, height: 0 },
-                      textShadowRadius: 8,
+                      shadowOpacity: 0.7,
+                      shadowRadius: 10,
+                      elevation: 10,
                     }),
                   },
                 ]}
               >
-                {userType.charAt(0).toUpperCase() + userType.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={() => setShowSettingsMenu(true)}
-          >
-            <MaterialCommunityIcons
-              name="cog"
-              size={24}
-              color={theme.primary}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <UserSelectionMenu
-        visible={showUserMenu}
-        onClose={() => setShowUserMenu(false)}
-      />
-      <SettingsMenu
-        visible={showSettingsMenu}
-        onClose={() => setShowSettingsMenu(false)}
-        updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
-      />
-
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
-        {/* Main Score Card */}
-        <View
-          style={[
-            styles.scoreCard,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-            },
-          ]}
-        >
-          <CircularProgress
-            size={200}
-            strokeWidth={12}
-            progress={safetyScore}
-            score={safetyScore}
-            gradientColors={[theme.primary, theme.success]}
-          />
-          <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
-            Your Safety Score
-          </Text>
-          <Text style={[styles.scoreMessage, { color: theme.text }]}>
-            Good driving! Keep it up.
-          </Text>
-        </View>
-
-        {/* Score Breakdown Grid */}
-        <View style={styles.breakdownGrid}>
-          {scoreBreakdown.map((item, index) => (
-            <View
-              key={index}
-              style={[
-                styles.breakdownItem,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
-              ]}
+                <Text
+                  style={[
+                    styles.userTypeText,
+                    {
+                      color: theme.text,
+                      textAlign: "center",
+                      ...(theme.dark && {
+                        textShadowColor: theme.primary,
+                        textShadowOffset: { width: 0, height: 0 },
+                        textShadowRadius: 8,
+                      }),
+                    },
+                  ]}
+                >
+                  {userType.charAt(0).toUpperCase() + userType.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setShowSettingsMenu(true)}
             >
-              <View
-                style={[
-                  styles.iconContainer,
-                  { backgroundColor: `${item.color}15` },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name={item.icon}
-                  size={24}
-                  color={item.color}
-                />
-              </View>
-              <Text style={[styles.breakdownScore, { color: theme.text }]}>
-                {item.score}
-              </Text>
-              <Text
-                style={[styles.breakdownTitle, { color: theme.textSecondary }]}
-              >
-                {item.title}
-              </Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Recent Events Section */}
-        <View style={styles.eventsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              Recent Trips
-            </Text>
-            <TouchableOpacity>
-              <Text style={[styles.viewAllButton, { color: theme.primary }]}>
-                View All
-              </Text>
+              <MaterialCommunityIcons
+                name="cog"
+                size={24}
+                color={theme.primary}
+              />
             </TouchableOpacity>
           </View>
+        </View>
 
-          {recentEvents.map((event, index) => (
+        <UserSelectionMenu
+          visible={showUserMenu}
+          onClose={() => setShowUserMenu(false)}
+        />
+        <SettingsMenu
+          visible={showSettingsMenu}
+          onClose={() => setShowSettingsMenu(false)}
+          updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
+        />
+
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+          {/* Main Score Card */}
+          <View
+            style={[
+              styles.scoreCard,
+              {
+                backgroundColor: theme.card,
+                borderColor: theme.border,
+              },
+            ]}
+          >
+            <CircularProgress
+              size={200}
+              strokeWidth={12}
+              progress={safetyScore}
+              score={safetyScore}
+              gradientColors={[theme.primary, theme.success]}
+            />
+            <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
+              Your Safety Score
+            </Text>
+            <Text style={[styles.scoreMessage, { color: theme.text }]}>
+              Good driving! Keep it up.
+            </Text>
+          </View>
+
+          {/* Score Breakdown Grid */}
+          <View style={styles.breakdownGrid}>
+            {scoreBreakdown.map((item, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.breakdownItem,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.iconContainer,
+                    { backgroundColor: `${item.color}15` },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name={item.icon}
+                    size={24}
+                    color={item.color}
+                  />
+                </View>
+                <Text style={[styles.breakdownScore, { color: theme.text }]}>
+                  {item.score}
+                </Text>
+                <Text
+                  style={[
+                    styles.breakdownTitle,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {item.title}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Recent Events Section */}
+          <View style={styles.eventsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Recent Trips
+              </Text>
+              <TouchableOpacity>
+                <Text style={[styles.viewAllButton, { color: theme.primary }]}>
+                  View All
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {recentEvents.map((event, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.eventItem,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
+              >
+                <View style={styles.eventLocation}>
+                  <MaterialCommunityIcons
+                    name="map-marker"
+                    size={20}
+                    color={theme.primary}
+                  />
+                  <View style={styles.eventDetails}>
+                    <Text style={[styles.locationText, { color: theme.text }]}>
+                      {event.location}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.durationText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {event.duration}
+                    </Text>
+                  </View>
+                </View>
+                {event.events > 0 ? (
+                  <View style={styles.eventStatus}>
+                    <MaterialCommunityIcons
+                      name="alert-circle"
+                      size={16}
+                      color={theme.error}
+                    />
+                    <Text
+                      style={[
+                        styles.eventStatusText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {event.events} bad events
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.eventStatus}>
+                    <MaterialCommunityIcons
+                      name="check-circle"
+                      size={16}
+                      color={theme.success}
+                    />
+                    <Text
+                      style={[
+                        styles.eventStatusText,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      No issues
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+
+            {/* Improvement Section */}
             <TouchableOpacity
-              key={index}
               style={[
-                styles.eventItem,
-                {
-                  backgroundColor: theme.card,
-                  borderColor: theme.border,
-                },
+                styles.improvementCard,
+                { backgroundColor: theme.primary },
               ]}
             >
-              <View style={styles.eventLocation}>
-                <MaterialCommunityIcons
-                  name="map-marker"
-                  size={20}
-                  color={theme.primary}
-                />
-                <View style={styles.eventDetails}>
-                  <Text style={[styles.locationText, { color: theme.text }]}>
-                    {event.location}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.durationText,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {event.duration}
-                  </Text>
-                </View>
+              <View style={styles.improvementContent}>
+                <Text style={styles.improvementTitle}>
+                  See where you can improve
+                </Text>
+                <Text style={styles.improvementSubtitle}>
+                  Tap to view map of roads with bad driving events.
+                </Text>
               </View>
-              {event.events > 0 ? (
-                <View style={styles.eventStatus}>
-                  <MaterialCommunityIcons
-                    name="alert-circle"
-                    size={16}
-                    color={theme.error}
-                  />
-                  <Text
-                    style={[
-                      styles.eventStatusText,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    {event.events} bad events
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.eventStatus}>
-                  <MaterialCommunityIcons
-                    name="check-circle"
-                    size={16}
-                    color={theme.success}
-                  />
-                  <Text
-                    style={[
-                      styles.eventStatusText,
-                      { color: theme.textSecondary },
-                    ]}
-                  >
-                    No issues
-                  </Text>
-                </View>
-              )}
+              <MaterialCommunityIcons name="map" size={24} color="#fff" />
             </TouchableOpacity>
-          ))}
-
-          {/* Improvement Section */}
-          <TouchableOpacity
-            style={[styles.improvementCard, { backgroundColor: theme.primary }]}
-          >
-            <View style={styles.improvementContent}>
-              <Text style={styles.improvementTitle}>
-                See where you can improve
-              </Text>
-              <Text style={styles.improvementSubtitle}>
-                Tap to view map of roads with bad driving events.
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="map" size={24} color="#fff" />
-          </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -298,7 +307,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 55,
     paddingBottom: 8,
     backgroundColor: "#fff",
   },

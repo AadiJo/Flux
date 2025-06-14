@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { StyleSheet, View, TouchableOpacity, Text } from "react-native";
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  Text,
+  Platform,
+} from "react-native";
 import * as SplashScreen from "expo-splash-screen";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,6 +15,7 @@ import { SettingsProvider } from "./contexts/SettingsContext";
 import * as Location from "expo-location";
 import { LocationProvider } from "./contexts/LocationContext";
 import { initializeLogging, getLogs } from "./services/loggingService";
+import { BlurView } from "expo-blur";
 
 import WelcomeScreen from "./components/Onboarding";
 import WifiSelectionModal from "./components/WifiSelectionModal";
@@ -25,7 +32,7 @@ import { useAlertBanner } from "./hooks/useAlertBanner";
 SplashScreen.preventAutoHideAsync();
 
 const AppContent = () => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const [isAppReady, setIsAppReady] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [selectedMode, setSelectedMode] = useState("home");
@@ -205,50 +212,77 @@ const AppContent = () => {
         />
         <WelcomeScreen visible={hasSeenWelcome} onContinue={handleContinue} />
 
-        <View
-          style={[
-            styles.contentContainer,
-            { backgroundColor: theme.background },
-          ]}
-        >
-          {selectedMode === "home" && (
-            <HomeScreen
-              updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
-            />
-          )}
-          {selectedMode === "motion" && (
-            <MotionScreen onResetSplash={handleResetSplash} />
-          )}
-          {selectedMode === "live" && (
-            <LiveScreen
-              onOpenWifiModal={() => setIsWifiModalVisible(true)}
-              selectedNetwork={selectedNetwork}
-              onResetSplash={handleResetSplash}
-              showBanner={showBanner}
-              setSpeedingPins={setSpeedingPins}
-            />
-          )}
-          {selectedMode === "simulation" && (
-            <SimulationScreen onResetSplash={handleResetSplash} />
-          )}
-          {selectedMode === "maps" && (
-            <MapsScreen
-              appLocation={location}
-              appStreetName={streetName}
-              speedingPins={speedingPins}
-            />
-          )}
-        </View>
+        {selectedMode === "maps" ? (
+          <MapsScreen
+            appLocation={location}
+            appStreetName={streetName}
+            speedingPins={speedingPins}
+          />
+        ) : (
+          <View
+            style={[
+              styles.contentContainer,
+              { backgroundColor: theme.background },
+            ]}
+          >
+            {selectedMode === "home" && (
+              <HomeScreen
+                updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
+              />
+            )}
+            {selectedMode === "motion" && (
+              <MotionScreen onResetSplash={handleResetSplash} />
+            )}
+            {selectedMode === "live" && (
+              <LiveScreen
+                onOpenWifiModal={() => setIsWifiModalVisible(true)}
+                selectedNetwork={selectedNetwork}
+                onResetSplash={handleResetSplash}
+                showBanner={showBanner}
+                setSpeedingPins={setSpeedingPins}
+              />
+            )}
+            {selectedMode === "simulation" && (
+              <SimulationScreen onResetSplash={handleResetSplash} />
+            )}
+          </View>
+        )}
 
         <View
           style={[
             styles.navbar,
             {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
+              borderColor: isDark
+                ? "rgba(20, 20, 20, 0.1)"
+                : "rgba(255, 255, 255, 0.3)",
             },
           ]}
         >
+          <BlurView
+            intensity={isDark ? 40 : 80}
+            tint={isDark ? "dark" : "light"}
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                backgroundColor: isDark
+                  ? "rgba(10, 10, 10, 0.4)"
+                  : "rgba(255, 255, 255, 0.5)",
+              },
+            ]}
+            experimentalBlurMethod="dimezis"
+          />
+          <View
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: isDark
+                ? "rgba(49, 49, 49, 0.3)"
+                : "rgba(211, 211, 211, 0.3)",
+            }}
+          />
           <TouchableOpacity
             style={styles.navItem}
             onPress={() => setSelectedMode("home")}
@@ -417,25 +451,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#fff",
     paddingVertical: 8,
     borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
     position: "absolute",
     bottom: 20,
     left: 20,
     right: 20,
     borderWidth: 1,
-    borderColor: "#eee",
     height: 65,
     zIndex: 1,
+    overflow: "hidden",
   },
   navItem: {
     flex: 1,
