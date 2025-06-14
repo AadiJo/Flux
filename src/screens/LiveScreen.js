@@ -102,12 +102,15 @@ export const LiveScreen = ({
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
+      console.log("Network state changed:", state);
       if (state.type === "wifi" && state.isConnected) {
         setNetworkDetails(state.details);
         setIsWicanConnected(true);
+        console.log("WiFi connected:", state.details);
       } else {
         setIsWicanConnected(false);
         setNetworkDetails(null);
+        console.log("WiFi disconnected");
       }
     });
 
@@ -118,9 +121,11 @@ export const LiveScreen = ({
 
   useEffect(() => {
     if (isConnected) {
+      console.log("Starting data polling...");
       fetchData();
       dataInterval.current = setInterval(fetchData, 1000); // Poll every second
     } else {
+      console.log("Stopping data polling...");
       if (dataInterval.current) {
         clearInterval(dataInterval.current);
         dataInterval.current = null;
@@ -181,6 +186,7 @@ export const LiveScreen = ({
 
   const fetchData = async () => {
     if (isWicanSimulated) {
+      console.log("Fetching simulated data...");
       if (!isLogging) {
         setIsLogging(true);
       }
@@ -207,8 +213,10 @@ export const LiveScreen = ({
         lastFetchFailed.current = false;
       }
     } else {
+      console.log("Fetching real WiCAN data...");
       try {
         const newObd2Data = await fetchWicanData();
+        console.log("Received WiCAN data:", newObd2Data);
         if (!isLogging) {
           setIsLogging(true);
         }
@@ -220,6 +228,7 @@ export const LiveScreen = ({
             : updatedHistory;
         });
         if (!isApiConnected) {
+          console.log("API connection established");
           setIsApiConnected(true);
         }
         if (lastFetchFailed.current) {
@@ -227,13 +236,15 @@ export const LiveScreen = ({
           lastFetchFailed.current = false;
         }
       } catch (error) {
+        console.log("Failed to fetch WiCAN data:", error.message);
         if (isApiConnected) {
+          console.log("API connection lost");
           setIsApiConnected(false);
         }
         if (!lastFetchFailed.current) {
           console.log(
             "Failed to fetch WiCAN data. Further errors will be suppressed until connection is re-established.",
-            error
+            error.message
           );
           lastFetchFailed.current = true;
         }

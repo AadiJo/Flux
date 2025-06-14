@@ -459,7 +459,6 @@ const styles = StyleSheet.create({
     right: 20,
     borderWidth: 1,
     height: 65,
-    zIndex: 1,
     overflow: "hidden",
   },
   navItem: {

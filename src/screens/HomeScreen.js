@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  Platform,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
@@ -19,6 +20,8 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
   const { userType } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const [pidScanStatus, setPidScanStatus] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
 
   const safetyScore = 86;
   const scoreBreakdown = [
@@ -48,10 +51,46 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
     { location: "Lake Drive", duration: "31 min", events: 0, status: "good" },
   ];
 
+  const handleScanPids = async () => {
+    setIsScanning(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(
+        "http://192.168.80.1/scan_available_pids?protocol=7",
+        {
+          signal: controller.signal,
+        }
+      );
+      if (response.ok) {
+        setPidScanStatus("success");
+        console.log("PID scan completed successfully");
+      } else {
+        setPidScanStatus("error");
+        console.log("PID scan failed with status:", response.status);
+      }
+    } catch (error) {
+      setPidScanStatus("error");
+      console.log("PID scan failed:", error.message);
+    } finally {
+      clearTimeout(timeoutId);
+      setIsScanning(false);
+      setTimeout(() => {
+        setPidScanStatus(null);
+      }, 1000);
+    }
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+    <SafeAreaView
+      style={{ flex: 1, backgroundColor: theme.background }}
+      edges={["top"]}
+    >
       <ScrollView
         style={[styles.scrollView, { backgroundColor: theme.background }]}
+        contentContainerStyle={[styles.scrollViewContent]}
+        showsVerticalScrollIndicator={false}
       >
         <View style={[styles.header, { backgroundColor: theme.background }]}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
@@ -291,8 +330,39 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
               <MaterialCommunityIcons name="map" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            style={[
+              styles.scanButton,
+              {
+                backgroundColor: theme.card,
+                borderColor:
+                  pidScanStatus === "success"
+                    ? theme.success
+                    : pidScanStatus === "error"
+                    ? theme.error
+                    : theme.primary,
+                opacity: isScanning ? 0.6 : 1,
+              },
+            ]}
+            onPress={handleScanPids}
+            activeOpacity={0.8}
+            disabled={isScanning}
+          >
+            <Text style={[styles.scanButtonText, { color: theme.text }]}>
+              Scan PIDs
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
+      <UserSelectionMenu
+        visible={showUserMenu}
+        onClose={() => setShowUserMenu(false)}
+      />
+      <SettingsMenu
+        visible={showSettingsMenu}
+        onClose={() => setShowSettingsMenu(false)}
+      />
     </SafeAreaView>
   );
 };
@@ -300,8 +370,8 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
 const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: "#fff",
   },
+  scrollViewContent: {},
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -315,12 +385,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   container: {
-    flex: 1,
     width: "100%",
     alignItems: "center",
     padding: 16,
     paddingTop: 0,
-    paddingBottom: 105,
   },
   scoreCard: {
     width: "100%",
@@ -485,6 +553,19 @@ const styles = StyleSheet.create({
   },
   userTypeText: {
     fontSize: 16,
+    fontWeight: "600",
+  },
+  scanButton: {
+    width: "100%",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: "center",
+    marginTop: 24,
+    marginBottom: 50,
+  },
+  scanButtonText: {
+    fontSize: 18,
     fontWeight: "600",
   },
 });
