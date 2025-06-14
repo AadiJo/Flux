@@ -10,6 +10,7 @@ import {
   Alert,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
@@ -19,7 +20,19 @@ import * as Sharing from "expo-sharing";
 
 const SettingButton = ({ label, icon, onPress, theme }) => (
   <TouchableOpacity
-    style={[styles.settingButton, { backgroundColor: theme.background }]}
+    style={[
+      styles.settingButton,
+      {
+        backgroundColor: theme.card,
+        borderColor: theme.primary,
+        shadowColor: theme.primary,
+        ...(theme.dark && {
+          shadowOpacity: 0.7,
+          shadowRadius: 10,
+          elevation: 10,
+        }),
+      },
+    ]}
     onPress={onPress}
   >
     <MaterialCommunityIcons name={icon} size={24} color={theme.primary} />
@@ -34,7 +47,7 @@ export const SettingsMenu = ({
   onClose,
   updateSpeedingPinsFromLogs,
 }) => {
-  const { theme } = useTheme();
+  const { theme, isDark } = useTheme();
   const { speedingThreshold, updateSpeedingThreshold } = useSettings();
   const [showingModal, setShowingModal] = useState(visible);
   const [localThreshold, setLocalThreshold] = useState(speedingThreshold);
@@ -137,7 +150,6 @@ export const SettingsMenu = ({
   };
 
   if (!showingModal) return null;
-
   return (
     <Modal
       visible={showingModal}
@@ -150,8 +162,8 @@ export const SettingsMenu = ({
           styles.modalOverlay,
           {
             backgroundColor: theme.dark
-              ? "rgba(0, 0, 0, 0.7)"
-              : "rgba(0, 0, 0, 0.25)",
+              ? "rgba(0, 0, 0, 0.98)"
+              : "rgba(0, 0, 0, 0.65)",
           },
         ]}
         activeOpacity={1}
@@ -165,15 +177,30 @@ export const SettingsMenu = ({
             style={[
               styles.menu,
               {
-                backgroundColor: theme.card,
+                backgroundColor: "transparent",
                 opacity: overlayOpacity,
                 transform: [{ scale: menuScale }],
               },
             ]}
           >
+            <BlurView
+              intensity={isDark ? 80 : 140}
+              tint={isDark ? "dark" : "light"}
+              style={[
+                StyleSheet.absoluteFill,
+                {
+                  backgroundColor: isDark
+                    ? "rgba(10, 10, 10, 0.4)"
+                    : "rgba(255, 255, 255, 0.5)",
+                  overflow: "hidden",
+                  borderRadius: 16,
+                },
+              ]}
+              experimentalBlurMethod="dimezis"
+            />
             <View style={styles.settingOption}>
               <Text style={[styles.settingLabel, { color: theme.text }]}>
-                Speeding Threshold (mph over)
+                Speeding Threshold
               </Text>
               <View style={styles.valueContainer}>
                 <TouchableOpacity
@@ -257,14 +284,9 @@ const styles = StyleSheet.create({
   },
   menu: {
     width: "80%",
-    backgroundColor: "#fff",
+    backgroundColor: "transparent",
     borderRadius: 16,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
     padding: 20,
   },
   settingOption: {
@@ -318,8 +340,17 @@ const styles = StyleSheet.create({
   settingButton: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    borderWidth: 1.5,
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 5,
+    elevation: 5,
   },
   settingButtonLabel: {
     marginLeft: 10,
