@@ -5,7 +5,7 @@ const PROTOCOL_STORAGE_KEY = "obd_protocol";
 const fetchProtocolResponse = async (protocol) => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     const response = await fetch(
       `http://192.168.80.1/scan_available_pids?protocol=${protocol}`,
