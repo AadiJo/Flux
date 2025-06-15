@@ -17,6 +17,7 @@ import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
 import * as FileSystem from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
+import { getStoredProtocol } from "../services/protocolDetectionService";
 
 const SettingButton = ({ label, icon, onPress, theme }) => (
   <TouchableOpacity
@@ -51,6 +52,7 @@ export const SettingsMenu = ({
   const { speedingThreshold, updateSpeedingThreshold } = useSettings();
   const [showingModal, setShowingModal] = useState(visible);
   const [localThreshold, setLocalThreshold] = useState(speedingThreshold);
+  const [protocolId, setProtocolId] = useState(null);
 
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const menuScale = useRef(new Animated.Value(0.95)).current;
@@ -64,6 +66,13 @@ export const SettingsMenu = ({
       setShowingModal(true);
       overlayOpacity.setValue(0);
       menuScale.setValue(0.95);
+
+      // Fetch the stored protocol when menu opens
+      const fetchProtocol = async () => {
+        const protocol = await getStoredProtocol();
+        setProtocolId(protocol);
+      };
+      fetchProtocol();
 
       Animated.parallel([
         Animated.timing(overlayOpacity, {
@@ -264,6 +273,12 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
+            <View style={styles.separator} />
+            <Text style={[styles.protocolText, { color: theme.textSecondary }]}>
+              {protocolId
+                ? `OBD Protocol: ${protocolId}`
+                : "No OBD Protocol Configured"}
+            </Text>
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={[styles.closeButtonText, { color: theme.primary }]}>
                 Done
@@ -355,5 +370,11 @@ const styles = StyleSheet.create({
   settingButtonLabel: {
     marginLeft: 10,
     fontSize: 16,
+  },
+  protocolText: {
+    fontSize: 14,
+    textAlign: "center",
+    marginBottom: 10,
+    fontWeight: "500",
   },
 });

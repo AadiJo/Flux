@@ -14,14 +14,14 @@ import { UserSelectionMenu } from "../components/UserSelectionMenu";
 import { SettingsMenu } from "../components/SettingsMenu";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
+import { scanAvailablePids } from "../services/pidService";
 
-export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
+export const HomeScreen = ({ updateSpeedingPinsFromLogs, showBanner }) => {
   const { theme } = useTheme();
   const { userType } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [pidScanStatus, setPidScanStatus] = useState(null);
-  const [isScanning, setIsScanning] = useState(false);
 
   const safetyScore = 86;
   const scoreBreakdown = [
@@ -52,34 +52,19 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
   ];
 
   const handleScanPids = async () => {
-    setIsScanning(true);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    try {
-      const response = await fetch(
-        "http://192.168.80.1/scan_available_pids?protocol=7",
-        {
-          signal: controller.signal,
-        }
-      );
-      if (response.ok) {
-        setPidScanStatus("success");
-        console.log("PID scan completed successfully");
-      } else {
-        setPidScanStatus("error");
-        console.log("PID scan failed with status:", response.status);
+    setPidScanStatus("scanning");
+    const result = await scanAvailablePids();
+    setPidScanStatus(result.success ? "success" : "error");
+    if (!result.success) {
+      console.log("PID scan failed:", result.error);
+      if (result.error.includes("No protocol configured")) {
+        showBanner({
+          message: "Please configure protocol first",
+          backgroundColor: theme.error,
+        });
       }
-    } catch (error) {
-      setPidScanStatus("error");
-      console.log("PID scan failed:", error.message);
-    } finally {
-      clearTimeout(timeoutId);
-      setIsScanning(false);
-      setTimeout(() => {
-        setPidScanStatus(null);
-      }, 1000);
     }
+    setTimeout(() => setPidScanStatus(null), 2000);
   };
 
   return (
@@ -342,15 +327,20 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
                     : pidScanStatus === "error"
                     ? theme.error
                     : theme.primary,
-                opacity: isScanning ? 0.6 : 1,
+                opacity: pidScanStatus === "scanning" ? 0.6 : 1,
               },
             ]}
             onPress={handleScanPids}
-            activeOpacity={0.8}
-            disabled={isScanning}
+            disabled={pidScanStatus === "scanning"}
           >
             <Text style={[styles.scanButtonText, { color: theme.text }]}>
-              Scan PIDs
+              {pidScanStatus === "scanning"
+                ? "Scanning..."
+                : pidScanStatus === "success"
+                ? "Scan Complete!"
+                : pidScanStatus === "error"
+                ? "Scan Failed"
+                : "Scan PIDs"}
             </Text>
           </TouchableOpacity>
         </View>

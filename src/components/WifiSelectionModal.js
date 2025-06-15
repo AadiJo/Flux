@@ -13,9 +13,10 @@ import {
   TextInput,
   Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
 import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
+import { PidConfigModal } from "./PidConfigModal";
 
 export default function WifiSelectionModal({
   visible,
@@ -29,6 +30,7 @@ export default function WifiSelectionModal({
   const [showPasswordInput, setShowPasswordInput] = useState(false);
   const [showingModal, setShowingModal] = useState(visible);
   const [dismissing, setDismissing] = useState(false);
+  const [showPidConfig, setShowPidConfig] = useState(false);
 
   // Animated values for overlay and sheet
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -189,9 +191,36 @@ export default function WifiSelectionModal({
             >
               <Text style={styles.iosSettingsButtonText}>Open Settings</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.pidConfigButton,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.primary,
+                },
+              ]}
+              onPress={() => setShowPidConfig(true)}
+            >
+              <MaterialCommunityIcons
+                name="tune"
+                size={20}
+                color={theme.primary}
+              />
+              <Text
+                style={[styles.pidConfigButtonText, { color: theme.primary }]}
+              >
+                Configure PIDs
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.View>
+
+      <PidConfigModal
+        visible={showPidConfig}
+        onClose={() => setShowPidConfig(false)}
+      />
     </Modal>
   );
 }
@@ -226,7 +255,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: -20,
   },
   modalTitle: {
     fontSize: 20,
@@ -261,5 +290,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
+  },
+  pidConfigButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  pidConfigButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
   },
 });

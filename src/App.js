@@ -228,6 +228,7 @@ const AppContent = () => {
             {selectedMode === "home" && (
               <HomeScreen
                 updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
+                showBanner={showBanner}
               />
             )}
             {selectedMode === "motion" && (
