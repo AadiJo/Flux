@@ -12,16 +12,16 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
 import { UserSelectionMenu } from "../components/UserSelectionMenu";
 import { SettingsMenu } from "../components/SettingsMenu";
+import { PidScanModal } from "../components/PidScanModal";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
-import { scanAvailablePids } from "../services/pidService";
 
-export const HomeScreen = ({ updateSpeedingPinsFromLogs, showBanner }) => {
+export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
   const { theme } = useTheme();
   const { userType } = useUser();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
-  const [pidScanStatus, setPidScanStatus] = useState(null);
+  const [showPidScan, setShowPidScan] = useState(false);
 
   const safetyScore = 86;
   const scoreBreakdown = [
@@ -51,22 +51,6 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs, showBanner }) => {
     { location: "Lake Drive", duration: "31 min", events: 0, status: "good" },
   ];
 
-  const handleScanPids = async () => {
-    setPidScanStatus("scanning");
-    const result = await scanAvailablePids();
-    setPidScanStatus(result.success ? "success" : "error");
-    if (!result.success) {
-      console.log("PID scan failed:", result.error);
-      if (result.error.includes("No protocol configured")) {
-        showBanner({
-          message: "Please configure protocol first",
-          backgroundColor: theme.error,
-        });
-      }
-    }
-    setTimeout(() => setPidScanStatus(null), 2000);
-  };
-
   return (
     <SafeAreaView
       style={{ flex: 1, backgroundColor: theme.background }}
@@ -85,6 +69,16 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs, showBanner }) => {
             >
               <MaterialCommunityIcons
                 name="refresh"
+                size={24}
+                color={theme.primary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setShowPidScan(true)}
+            >
+              <MaterialCommunityIcons
+                name="tune"
                 size={24}
                 color={theme.primary}
               />
@@ -148,6 +142,10 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs, showBanner }) => {
           visible={showSettingsMenu}
           onClose={() => setShowSettingsMenu(false)}
           updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
+        />
+        <PidScanModal
+          visible={showPidScan}
+          onClose={() => setShowPidScan(false)}
         />
 
         <View style={[styles.container, { backgroundColor: theme.background }]}>
@@ -315,34 +313,6 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs, showBanner }) => {
               <MaterialCommunityIcons name="map" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            style={[
-              styles.scanButton,
-              {
-                backgroundColor: theme.card,
-                borderColor:
-                  pidScanStatus === "success"
-                    ? theme.success
-                    : pidScanStatus === "error"
-                    ? theme.error
-                    : theme.primary,
-                opacity: pidScanStatus === "scanning" ? 0.6 : 1,
-              },
-            ]}
-            onPress={handleScanPids}
-            disabled={pidScanStatus === "scanning"}
-          >
-            <Text style={[styles.scanButtonText, { color: theme.text }]}>
-              {pidScanStatus === "scanning"
-                ? "Scanning..."
-                : pidScanStatus === "success"
-                ? "Scan Complete!"
-                : pidScanStatus === "error"
-                ? "Scan Failed"
-                : "Scan PIDs"}
-            </Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
       <UserSelectionMenu
@@ -361,7 +331,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  scrollViewContent: {},
+  scrollViewContent: {
+    paddingBottom: 100,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -401,7 +373,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   scoreMessage: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#333",
     fontWeight: "500",
     marginTop: 8,
@@ -443,6 +415,7 @@ const styles = StyleSheet.create({
   },
   eventsSection: {
     width: "100%",
+    marginBottom: -70,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -507,6 +480,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginTop: 16,
+    marginBottom: 24,
   },
   improvementContent: {
     flex: 1,
@@ -543,19 +517,6 @@ const styles = StyleSheet.create({
   },
   userTypeText: {
     fontSize: 16,
-    fontWeight: "600",
-  },
-  scanButton: {
-    width: "100%",
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    alignItems: "center",
-    marginTop: 24,
-    marginBottom: 50,
-  },
-  scanButtonText: {
-    fontSize: 18,
     fontWeight: "600",
   },
 });
