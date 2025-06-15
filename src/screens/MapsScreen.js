@@ -10,11 +10,32 @@ import {
 } from "react-native";
 import MapView, { PROVIDER_DEFAULT, Marker, Callout } from "react-native-maps";
 import { useTheme } from "../contexts/ThemeContext";
+import { useSettings } from "../contexts/SettingsContext";
+import { initializeLogging } from "../services/loggingService";
 
-export const MapsScreen = ({ appLocation, appStreetName, speedingPins }) => {
+export const MapsScreen = ({
+  appLocation,
+  appStreetName,
+  speedingPins,
+  updateSpeedingPinsFromLogs,
+}) => {
   const { theme, isDark } = useTheme();
+  const { speedingThreshold } = useSettings();
   const mapRef = useRef(null);
   const [region, setRegion] = useState(null);
+
+  useEffect(() => {
+    // Initialize logging and then load pins
+    const loadPins = async () => {
+      try {
+        await initializeLogging();
+        await updateSpeedingPinsFromLogs();
+      } catch (error) {
+        console.error("Failed to load speeding pins:", error);
+      }
+    };
+    loadPins();
+  }, [speedingThreshold]); // Re-run when speeding threshold changes
 
   // Update map region state
   const updateMapRegion = useCallback((latitude, longitude) => {

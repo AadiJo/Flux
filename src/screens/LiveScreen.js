@@ -16,6 +16,7 @@ import NetInfo from "@react-native-community/netinfo";
 import { LineChart } from "react-native-chart-kit";
 import { MAX_SPEED_DATA_POINTS } from "../constants/chartConfig";
 import { useLocation } from "../contexts/LocationContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   startLogging,
   stopLogging,
@@ -28,6 +29,7 @@ import { fetchWicanData } from "../services/wicanService";
 import LogViewerModal from "../components/LogViewerModal";
 
 const screenWidth = Dimensions.get("window").width;
+const LAST_ALERT_KEY = "last_speeding_alert_timestamp";
 
 const getDistanceInFeet = (coord1, coord2) => {
   if (!coord1 || !coord2) return Infinity;
@@ -265,13 +267,19 @@ export const LiveScreen = ({
       );
     });
 
+    // Get the last alert timestamp first
+    const lastAlertStr = await AsyncStorage.getItem(LAST_ALERT_KEY);
+    const lastAlertTime = lastAlertStr ? parseInt(lastAlertStr, 10) : 0;
+
     const uniquePins = [];
+    const newUniquePins = [];
     for (const log of speedingLogs) {
       const newPin = {
         latitude: log.location.latitude,
         longitude: log.location.longitude,
         speed: log.obd2Data.speed,
         speedLimit: log.speedLimit,
+        timestamp: log.timestamp,
       };
 
       let isTooClose = false;
@@ -284,15 +292,36 @@ export const LiveScreen = ({
 
       if (!isTooClose) {
         uniquePins.push(newPin);
+        // Check if this is a new event
+        if (new Date(log.timestamp).getTime() > lastAlertTime) {
+          newUniquePins.push(newPin);
+        }
       }
     }
 
     if (uniquePins.length > 0) {
       setSpeedingPins(uniquePins);
-      Alert.alert(
-        "Speeding Detected",
-        `${uniquePins.length} speeding events have been marked on the map.`
-      );
+
+      // Only show alert if we have new speeding events
+      if (newUniquePins.length > 0) {
+        const mostRecentTimestamp = Math.max(
+          ...newUniquePins.map((pin) => new Date(pin.timestamp).getTime())
+        );
+
+        Alert.alert(
+          "Speeding Detected",
+          `${newUniquePins.length} new speeding event${
+            newUniquePins.length === 1 ? "" : "s"
+          } ${
+            newUniquePins.length === 1 ? "has" : "have"
+          } been marked on the map.`
+        );
+        // Update the last alert timestamp
+        await AsyncStorage.setItem(
+          LAST_ALERT_KEY,
+          mostRecentTimestamp.toString()
+        );
+      }
     }
   };
 

@@ -11,10 +11,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import { UserProvider } from "./contexts/UserContext";
-import { SettingsProvider } from "./contexts/SettingsContext";
+import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import * as Location from "expo-location";
 import { LocationProvider } from "./contexts/LocationContext";
-import { initializeLogging, getLogs } from "./services/loggingService";
+import { initializeLogging } from "./services/loggingService";
+import { getSpeedingPins } from "./services/speedingService";
 import { BlurView } from "expo-blur";
 
 import WelcomeScreen from "./components/Onboarding";
@@ -33,6 +34,7 @@ SplashScreen.preventAutoHideAsync();
 
 const AppContent = () => {
   const { theme, isDark } = useTheme();
+  const { speedingThreshold } = useSettings();
   const [isAppReady, setIsAppReady] = useState(false);
   const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [selectedMode, setSelectedMode] = useState("home");
@@ -50,48 +52,8 @@ const AppContent = () => {
   const [speedingPins, setSpeedingPins] = useState([]);
 
   const updateSpeedingPinsFromLogs = async () => {
-    const simLogs = await getLogs("sim");
-    const realLogs = await getLogs("real");
-    const allLogs = [...simLogs, ...realLogs];
-
-    const allSpeedingEvents = allLogs
-      .filter((log) => {
-        const speed = log.obd2Data?.speed;
-        const speedLimit = log.speedLimit;
-        return (
-          typeof speed === "number" &&
-          typeof speedLimit === "number" &&
-          speed > speedLimit &&
-          log.location
-        );
-      })
-      .map((log) => ({
-        latitude: log.location.latitude,
-        longitude: log.location.longitude,
-        speed: log.obd2Data.speed,
-        speedLimit: log.speedLimit,
-      }));
-
-    // Group events by location (rounded to ~100m)
-    const groupedEvents = allSpeedingEvents.reduce((acc, event) => {
-      const lat = event.latitude.toFixed(3);
-      const lon = event.longitude.toFixed(3);
-      const key = `${lat},${lon}`;
-      if (!acc[key]) {
-        acc[key] = [];
-      }
-      acc[key].push(event);
-      return acc;
-    }, {});
-
-    // For each group, find the event with the highest speed
-    const representativePins = Object.values(groupedEvents).map((group) => {
-      return group.reduce((max, current) =>
-        current.speed > max.speed ? current : max
-      );
-    });
-
-    setSpeedingPins(representativePins);
+    const pins = await getSpeedingPins(speedingThreshold);
+    setSpeedingPins(pins);
   };
 
   useEffect(() => {
@@ -217,6 +179,7 @@ const AppContent = () => {
             appLocation={location}
             appStreetName={streetName}
             speedingPins={speedingPins}
+            updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
           />
         ) : (
           <View

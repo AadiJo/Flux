@@ -12,12 +12,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
+import { useSettings } from "../contexts/SettingsContext";
 import { getLogs } from "../services/loggingService";
 
 const screenHeight = Dimensions.get("window").height;
 
 const LogViewerModal = ({ visible, onClose, logType }) => {
   const { theme } = useTheme();
+  const { speedingThreshold } = useSettings();
   const [logs, setLogs] = useState([]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(screenHeight)).current;
@@ -89,8 +91,19 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
     }
 
     const { timestamp, obd2Data, location, streetName, speedLimit } = entry;
+    const isSpeeding =
+      obd2Data?.speed &&
+      speedLimit &&
+      Math.abs(obd2Data.speed - speedLimit) > speedingThreshold;
+
     return (
-      <View key={index} style={styles.logEntryContainer}>
+      <View
+        key={index}
+        style={[
+          styles.logEntryContainer,
+          isSpeeding && { backgroundColor: "rgba(255, 0, 0, 0.15)" },
+        ]}
+      >
         <Text style={[styles.logTimestamp, { color: theme.text }]}>
           {new Date(timestamp).toLocaleString()}
         </Text>
@@ -108,6 +121,8 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
         </Text>
         <Text style={[styles.logText, { color: theme.textSecondary }]}>
           Speed Limit: {speedLimit ? `${speedLimit.toFixed(2)} mph` : "N/A"}
+          {isSpeeding &&
+            ` (${Math.abs(obd2Data.speed - speedLimit).toFixed(1)} mph over)`}
         </Text>
       </View>
     );
