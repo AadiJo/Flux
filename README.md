@@ -6,6 +6,12 @@
   An app that connects to your car’s OBD-II port to track driving habits, score performance, and help you drive smarter.
 </p>
 
+## Screenshots
+
+<p align="center">
+  <img src="https://i.ibb.co/B2jqJjtG/Flux-Screenshots.png" alt="screenshots" />
+</p>
+
 ## Codebase Structure
 
 ```
