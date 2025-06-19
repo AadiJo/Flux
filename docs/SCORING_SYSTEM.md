@@ -98,9 +98,9 @@ Where:
 
 **Placeholder Values (Not Yet Implemented):**
 
-- Braking score: Fixed at 85
-- Steering score: Fixed at 90
-- Aggression score: Fixed at 80
+- Braking score: Fixed at 75
+- Steering score: Fixed at 80
+- Aggression score: Fixed at 72
 
 These placeholder scores are displayed in the UI but are not calculated from actual driving data.
 
