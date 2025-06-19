@@ -1,6 +1,14 @@
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+// Import scoreManager to trigger updates when trips complete
+let scoreManager = null;
+try {
+  scoreManager = require("../utils/scoreManager").scoreManager;
+} catch (error) {
+  // scoreManager not available, that's okay
+}
+
 const LOGGING_ACTIVE_KEY = "logging_active_";
 
 const loggers = {
@@ -128,6 +136,18 @@ export const stopLogging = async (logType, additionalData = {}) => {
       JSON.stringify(false)
     );
     console.log(`Logging stopped and state saved for ${logType}.`);
+
+    // Trigger score update when logging stops (trip completed)
+    if (scoreManager) {
+      try {
+        // Use setTimeout to avoid blocking the logging stop process
+        setTimeout(() => {
+          scoreManager.refreshScores(5, false).catch(console.error);
+        }, 1000);
+      } catch (error) {
+        console.error("Error triggering score update:", error);
+      }
+    }
   } catch (error) {
     console.error(`Failed to save logging state for ${logType}:`, error);
   }

@@ -274,6 +274,20 @@ export const SettingsMenu = ({
               />
             </View>
             <View style={styles.separator} />
+            <View style={styles.logActions}>
+              <SettingButton
+                label="Score Debug"
+                icon="bug-outline"
+                onPress={() => {
+                  onClose();
+                  // Navigate to score debug screen
+                  // This would need navigation prop passed to SettingsMenu
+                  console.log("Score debug pressed - implement navigation");
+                }}
+                theme={theme}
+              />
+            </View>
+            <View style={styles.separator} />
             <Text style={[styles.protocolText, { color: theme.textSecondary }]}>
               {protocolId
                 ? `OBD Protocol: ${protocolId}`

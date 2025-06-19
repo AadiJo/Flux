@@ -8,15 +8,18 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
+  Modal,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
 import { UserSelectionMenu } from "../components/UserSelectionMenu";
 import { SettingsMenu } from "../components/SettingsMenu";
 import { PidScanModal } from "../components/PidScanModal";
+import { ScoreDetailsCard } from "../components/ScoreDetailsCard";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
 import { useSettings } from "../contexts/SettingsContext";
+import { useSafetyScore } from "../hooks/useSafetyScore";
 import { getAllTrips } from "../services/loggingService";
 import { getSpeedingPinsForTrip } from "../services/speedingService";
 
@@ -29,51 +32,103 @@ export const HomeScreen = ({
   const { theme } = useTheme();
   const { userType } = useUser();
   const { speedingThreshold } = useSettings();
+
+  const {
+    overallScore,
+    breakdown,
+    loading: scoreLoading,
+    getScoreMessage,
+    refreshScore,
+    shouldUpdateScore,
+  } = useSafetyScore();
+
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPidScan, setShowPidScan] = useState(false);
+  const [showScoreDetails, setShowScoreDetails] = useState(false);
   const [recentTrips, setRecentTrips] = useState([]);
   const [badEventsCounts, setBadEventsCounts] = useState([]);
 
-  const safetyScore = 86;
-  const scoreBreakdown = [
-    {
-      title: "Speed Control",
-      score: 92,
-      icon: "speedometer",
-      color: theme.primary,
-    },
-    {
-      title: "Braking",
-      score: 80,
-      icon: "car-brake-hold",
-      color: theme.warning,
-    },
-    { title: "Steering", score: 89, icon: "steering", color: theme.success },
-    {
-      title: "Aggression",
-      score: 75,
-      icon: "car-emergency",
-      color: theme.error,
-    },
-  ];
+  // Use the calculated safety score instead of hardcoded value
+  const safetyScore = scoreLoading ? null : overallScore;
+  const scoreBreakdown =
+    scoreLoading || !breakdown
+      ? []
+      : [
+          {
+            title: "Speed Control",
+            score: breakdown.speedControl,
+            icon: "speedometer",
+            color: theme.primary,
+          },
+          {
+            title: "Braking",
+            score: breakdown.braking,
+            icon: "car-brake-hold",
+            color:
+              breakdown.braking >= 85
+                ? theme.success
+                : breakdown.braking >= 75
+                ? theme.warning
+                : theme.error,
+          },
+          {
+            title: "Steering",
+            score: breakdown.steering,
+            icon: "steering",
+            color: breakdown.steering >= 75 ? theme.success : theme.error,
+          },
+          {
+            title: "Aggression",
+            score: breakdown.aggression,
+            icon: "car-emergency",
+            color:
+              breakdown.aggression >= 85
+                ? theme.success
+                : breakdown.aggression >= 75
+                ? theme.warning
+                : theme.error,
+          },
+        ];
 
   useEffect(() => {
     // Load the two most recent trips
     (async () => {
-      const trips = await getAllTrips();
-      const topTrips = trips.slice(0, 2);
-      setRecentTrips(topTrips);
-      // Count bad events for each trip
-      const counts = await Promise.all(
-        topTrips.map(async (trip) => {
-          const pins = await getSpeedingPinsForTrip(speedingThreshold, trip);
-          return pins.length;
-        })
-      );
-      setBadEventsCounts(counts);
+      try {
+        const trips = await getAllTrips();
+        const topTrips = trips.slice(0, 2);
+        setRecentTrips(topTrips);
+
+        // Only calculate speeding events if we have trips
+        if (topTrips.length > 0) {
+          // Count bad events for each trip
+          const counts = await Promise.all(
+            topTrips.map(async (trip) => {
+              const pins = await getSpeedingPinsForTrip(
+                speedingThreshold,
+                trip
+              );
+              return pins.length;
+            })
+          );
+          setBadEventsCounts(counts);
+        } else {
+          setBadEventsCounts([]);
+        }
+
+        // Only refresh safety score if it needs updating (based on log timestamps)
+        const needsUpdate = await shouldUpdateScore();
+        if (needsUpdate) {
+          console.log("HomeScreen: Score needs update, refreshing...");
+          refreshScore();
+        } else {
+          console.log("HomeScreen: Score is up to date, skipping refresh");
+        }
+      } catch (error) {
+        console.error("HomeScreen: Error loading trips:", error);
+      }
     })();
-  }, [speedingThreshold]);
+  }, [speedingThreshold]); // Removed refreshScore dependency to prevent loops
 
   return (
     <SafeAreaView
@@ -93,7 +148,10 @@ export const HomeScreen = ({
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <TouchableOpacity
               style={styles.headerButton}
-              onPress={() => window.handleResetSplash()}
+              onPress={() => {
+                window.handleResetSplash();
+                refreshScore(); // Also refresh the safety score
+              }}
             >
               <MaterialCommunityIcons
                 name="refresh"
@@ -162,20 +220,6 @@ export const HomeScreen = ({
           </View>
         </View>
 
-        <UserSelectionMenu
-          visible={showUserMenu}
-          onClose={() => setShowUserMenu(false)}
-        />
-        <SettingsMenu
-          visible={showSettingsMenu}
-          onClose={() => setShowSettingsMenu(false)}
-          updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
-        />
-        <PidScanModal
-          visible={showPidScan}
-          onClose={() => setShowPidScan(false)}
-        />
-
         <View style={[styles.container, { backgroundColor: theme.background }]}>
           <View
             style={[
@@ -189,60 +233,111 @@ export const HomeScreen = ({
             <CircularProgress
               size={200}
               strokeWidth={12}
-              progress={safetyScore}
-              score={safetyScore}
+              progress={safetyScore || 0}
+              score={safetyScore || 0}
               gradientColors={[theme.primary, theme.success]}
             />
             <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
               Your Safety Score
             </Text>
-            <Text style={[styles.scoreMessage, { color: theme.text }]}>
-              Good driving! Keep it up.
+            <Text
+              style={[
+                styles.scoreMessage,
+                { color: theme.text, textAlign: "center" },
+              ]}
+            >
+              {scoreLoading
+                ? "Loading your safety score..."
+                : getScoreMessage(safetyScore)}
             </Text>
           </View>
 
           <View style={styles.breakdownGrid}>
-            {scoreBreakdown.map((item, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.breakdownItem,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                  },
-                ]}
-                onPress={() =>
-                  console.log(`Pressed ${item.title} score breakdown`)
-                }
-                activeOpacity={0.8}
-                underlayColor={theme.background}
-              >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    { backgroundColor: `${item.color}15` },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={item.icon}
-                    size={24}
-                    color={item.color}
-                  />
-                </View>
-                <Text style={[styles.breakdownScore, { color: theme.text }]}>
-                  {item.score}
-                </Text>
-                <Text
-                  style={[
-                    styles.breakdownTitle,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  {item.title}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {scoreLoading
+              ? // Show loading placeholders
+                [1, 2, 3, 4].map((item, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.breakdownItem,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                        opacity: 0.6,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        { backgroundColor: `${theme.textSecondary}15` },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="help-circle-outline"
+                        size={24}
+                        color={theme.textSecondary}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.breakdownScore,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      --
+                    </Text>
+                    <Text
+                      style={[
+                        styles.breakdownTitle,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      Loading...
+                    </Text>
+                  </View>
+                ))
+              : scoreBreakdown.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.breakdownItem,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => setShowScoreDetails(true)}
+                    activeOpacity={0.8}
+                    underlayColor={theme.background}
+                  >
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        { backgroundColor: `${item.color}15` },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name={item.icon}
+                        size={24}
+                        color={item.color}
+                      />
+                    </View>
+                    <Text
+                      style={[styles.breakdownScore, { color: theme.text }]}
+                    >
+                      {item.score}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.breakdownTitle,
+                        { color: theme.textSecondary },
+                      ]}
+                    >
+                      {item.title}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
           </View>
 
           {/* Recent Trips Section */}
@@ -355,6 +450,8 @@ export const HomeScreen = ({
           )}
         </View>
       </ScrollView>
+
+      {/* Modals */}
       <UserSelectionMenu
         visible={showUserMenu}
         onClose={() => setShowUserMenu(false)}
@@ -362,7 +459,28 @@ export const HomeScreen = ({
       <SettingsMenu
         visible={showSettingsMenu}
         onClose={() => setShowSettingsMenu(false)}
+        updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
       />
+      <PidScanModal
+        visible={showPidScan}
+        onClose={() => setShowPidScan(false)}
+      />
+
+      <Modal
+        visible={showScoreDetails}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowScoreDetails(false)}
+      >
+        <View
+          style={[{ flex: 1, backgroundColor: theme.background, padding: 16 }]}
+        >
+          <ScoreDetailsCard
+            onClose={() => setShowScoreDetails(false)}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
