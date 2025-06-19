@@ -42,14 +42,13 @@ export const SimulationScreen = ({ onResetSplash }) => {
   const [speedLimit, setSpeedLimit] = useState(null);
   const simulationInterval = useRef(null);
   const chartAnimationValue = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     if (isLogging) {
-      startLogging("sim");
+      startLogging("sim", { streetName });
     } else {
-      stopLogging("sim");
+      stopLogging("sim", { lastStreetName: streetName });
     }
-  }, [isLogging]);
+  }, [isLogging, streetName]);
 
   useEffect(() => {
     const fetchSpeedLimit = async () => {

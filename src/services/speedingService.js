@@ -78,3 +78,69 @@ export const getSpeedingPins = async (speedingThreshold) => {
   console.log("Returning speeding pins:", representativePins.length);
   return representativePins;
 };
+
+/**
+ * Gets speeding pins for a specific trip
+ * @param {number} speedingThreshold - The current speeding threshold from settings
+ * @param {Object} trip - The trip object containing logs
+ * @returns {Promise<Array>} - Array of speeding event pins for this trip
+ */
+export const getSpeedingPinsForTrip = async (speedingThreshold, trip) => {
+  console.log("Getting speeding pins for trip:", trip.roadName);
+  console.log("Trip has logs:", trip.logs ? trip.logs.length : 0);
+
+  if (!trip || !trip.logs) {
+    console.log("No trip or no logs, returning empty array");
+    return [];
+  }
+
+  const allSpeedingEvents = trip.logs
+    .filter((log) => {
+      const speed = log.obd2Data?.speed;
+      const limit = log.speedLimit;
+      return (
+        speed &&
+        limit &&
+        log.location &&
+        Math.abs(speed - limit) > speedingThreshold
+      );
+    })
+    .map((log) => ({
+      latitude: log.location.latitude,
+      longitude: log.location.longitude,
+      speed: log.obd2Data.speed,
+      speedLimit: log.speedLimit,
+      timestamp: log.timestamp,
+    }));
+
+  console.log("Found speeding events:", allSpeedingEvents.length);
+
+  // Group events that are close together AND have similar speeds
+  const groups = [];
+  for (const event of allSpeedingEvents) {
+    let foundGroup = false;
+    for (const group of groups) {
+      const lastEventInGroup = group[group.length - 1];
+      const distance = getDistanceInFeet(event, lastEventInGroup);
+      const speedDifference = Math.abs(event.speed - lastEventInGroup.speed);
+
+      if (distance <= 50 && speedDifference <= 10) {
+        group.push(event);
+        foundGroup = true;
+        break;
+      }
+    }
+    if (!foundGroup) {
+      groups.push([event]);
+    }
+  }
+
+  // For each group, find the event with the highest speed
+  const representativePins = groups.map((group) => {
+    return group.reduce((max, current) =>
+      current.speed > max.speed ? current : max
+    );
+  });
+  console.log("Returning speeding pins for trip:", representativePins.length);
+  return representativePins;
+};

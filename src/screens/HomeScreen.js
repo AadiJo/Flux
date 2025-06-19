@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -15,13 +15,24 @@ import { SettingsMenu } from "../components/SettingsMenu";
 import { PidScanModal } from "../components/PidScanModal";
 import { useTheme } from "../contexts/ThemeContext";
 import { useUser } from "../contexts/UserContext";
+import { useSettings } from "../contexts/SettingsContext";
+import { getAllTrips } from "../services/loggingService";
+import { getSpeedingPinsForTrip } from "../services/speedingService";
 
-export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
+export const HomeScreen = ({
+  updateSpeedingPinsFromLogs,
+  navigation,
+  setSelectedMode,
+  setHomeSelectedTrip,
+}) => {
   const { theme } = useTheme();
   const { userType } = useUser();
+  const { speedingThreshold } = useSettings();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPidScan, setShowPidScan] = useState(false);
+  const [recentTrips, setRecentTrips] = useState([]);
+  const [badEventsCounts, setBadEventsCounts] = useState([]);
 
   const safetyScore = 86;
   const scoreBreakdown = [
@@ -46,10 +57,22 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
     },
   ];
 
-  const recentEvents = [
-    { location: "Downtown Loop", duration: "14 min", events: 2, status: "bad" },
-    { location: "Lake Drive", duration: "31 min", events: 0, status: "good" },
-  ];
+  useEffect(() => {
+    // Load the two most recent trips
+    (async () => {
+      const trips = await getAllTrips();
+      const topTrips = trips.slice(0, 2);
+      setRecentTrips(topTrips);
+      // Count bad events for each trip
+      const counts = await Promise.all(
+        topTrips.map(async (trip) => {
+          const pins = await getSpeedingPinsForTrip(speedingThreshold, trip);
+          return pins.length;
+        })
+      );
+      setBadEventsCounts(counts);
+    })();
+  }, [speedingThreshold]);
 
   return (
     <SafeAreaView
@@ -217,102 +240,114 @@ export const HomeScreen = ({ updateSpeedingPinsFromLogs }) => {
             ))}
           </View>
 
-          <View style={styles.eventsSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Recent Trips
-              </Text>
-              <TouchableOpacity>
-                <Text style={[styles.viewAllButton, { color: theme.primary }]}>
-                  View All
+          {/* Recent Trips Section */}
+          {recentTrips.length > 0 && (
+            <View style={styles.eventsSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Recent Trips
                 </Text>
-              </TouchableOpacity>
-            </View>
-
-            {recentEvents.map((event, index) => (
-              <TouchableOpacity
-                key={index}
-                style={[
-                  styles.eventItem,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                  },
-                ]}
-              >
-                <View style={styles.eventLocation}>
-                  <MaterialCommunityIcons
-                    name="map-marker"
-                    size={20}
-                    color={theme.primary}
-                  />
-                  <View style={styles.eventDetails}>
-                    <Text style={[styles.locationText, { color: theme.text }]}>
-                      {event.location}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.durationText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {event.duration}
-                    </Text>
-                  </View>
-                </View>
-                {event.events > 0 ? (
-                  <View style={styles.eventStatus}>
-                    <MaterialCommunityIcons
-                      name="alert-circle"
-                      size={16}
-                      color={theme.error}
-                    />
-                    <Text
-                      style={[
-                        styles.eventStatusText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      {event.events} bad events
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.eventStatus}>
-                    <MaterialCommunityIcons
-                      name="check-circle"
-                      size={16}
-                      color={theme.success}
-                    />
-                    <Text
-                      style={[
-                        styles.eventStatusText,
-                        { color: theme.textSecondary },
-                      ]}
-                    >
-                      No issues
-                    </Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
-
-            <TouchableOpacity
-              style={[
-                styles.improvementCard,
-                { backgroundColor: theme.primary },
-              ]}
-            >
-              <View style={styles.improvementContent}>
-                <Text style={styles.improvementTitle}>
-                  See where you can improve
-                </Text>
-                <Text style={styles.improvementSubtitle}>
-                  Tap to view map of roads with bad driving events.
-                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (setSelectedMode) setSelectedMode("maps");
+                    if (setHomeSelectedTrip) setHomeSelectedTrip(null); // Show trip list
+                  }}
+                >
+                  <Text
+                    style={[styles.viewAllButton, { color: theme.primary }]}
+                  >
+                    View All
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <MaterialCommunityIcons name="map" size={24} color="#fff" />
-            </TouchableOpacity>
-          </View>
+              <View style={styles.recentTripsGroup}>
+                {recentTrips.map((trip, index) => (
+                  <TouchableOpacity
+                    key={trip.id || index}
+                    style={[
+                      styles.eventItem,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (setSelectedMode) setSelectedMode("maps");
+                      if (setHomeSelectedTrip) setHomeSelectedTrip(trip);
+                    }}
+                  >
+                    <View style={styles.eventLocation}>
+                      <MaterialCommunityIcons
+                        name="map-marker"
+                        size={20}
+                        color={theme.primary}
+                      />
+                      <View style={styles.eventDetails}>
+                        <Text
+                          style={[styles.locationText, { color: theme.text }]}
+                        >
+                          {trip.roadName || "Unknown Road"}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.durationText,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {(() => {
+                            if (!trip.endTime) return "Ongoing";
+                            const start = new Date(trip.startTime);
+                            const end = new Date(trip.endTime);
+                            const diffMs = end - start;
+                            if (
+                              isNaN(start.getTime()) ||
+                              isNaN(end.getTime()) ||
+                              diffMs < 0
+                            )
+                              return "Unknown";
+                            const diffMins = Math.floor(diffMs / (1000 * 60));
+                            if (diffMins < 1)
+                              return `${Math.floor(diffMs / 1000)} sec`;
+                            if (diffMins < 60) return `${diffMins} min`;
+                            const hours = Math.floor(diffMins / 60);
+                            const mins = diffMins % 60;
+                            return `${hours}h ${mins}m`;
+                          })()}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.eventStatus}>
+                      <MaterialCommunityIcons
+                        name={
+                          badEventsCounts[index] > 0
+                            ? "alert-circle"
+                            : "check-circle"
+                        }
+                        size={16}
+                        color={
+                          badEventsCounts[index] > 0
+                            ? theme.error
+                            : theme.success
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.eventStatusText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {badEventsCounts[index] > 0
+                          ? `${badEventsCounts[index]} bad event${
+                              badEventsCounts[index] > 1 ? "s" : ""
+                            }`
+                          : "No issues"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
       <UserSelectionMenu
@@ -472,16 +507,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
   },
-  improvementCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#007AFF",
-    borderRadius: 16,
-    padding: 20,
-    marginTop: 16,
-    marginBottom: 24,
-  },
   improvementContent: {
     flex: 1,
     marginRight: 16,
@@ -518,5 +543,9 @@ const styles = StyleSheet.create({
   userTypeText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  recentTripsGroup: {
+    width: "100%",
+    paddingBottom: 24,
   },
 });

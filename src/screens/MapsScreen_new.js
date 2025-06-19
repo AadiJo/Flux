@@ -23,8 +23,6 @@ export const MapsScreen = ({
   appStreetName,
   speedingPins,
   updateSpeedingPinsFromLogs,
-  homeSelectedTrip,
-  setHomeSelectedTrip,
 }) => {
   const { theme, isDark } = useTheme();
   const { speedingThreshold } = useSettings();
@@ -35,17 +33,28 @@ export const MapsScreen = ({
   const [tripSpeedingPins, setTripSpeedingPins] = useState([]);
 
   // Animation values
-  const slideAnim = useRef(new Animated.Value(0)).current; // Load trip data when a trip is selected
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // Load trip data when a trip is selected
   const loadTripData = async (trip) => {
     try {
-      console.log("Loading trip data for:", trip.roadName);
-      // Load pins first
+      setShowTripSelection(false);
+      setSelectedTrip(trip);
+
+      // Start with map view off-screen and slide in
+      slideAnim.setValue(0);
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+
       const pins = await getSpeedingPinsForTrip(speedingThreshold, trip);
       setTripSpeedingPins(pins);
-      // Set initial map region based on pins or logs
-      if (pins && pins.length > 0) {
-        updateMapRegion(pins[0].latitude, pins[0].longitude);
-      } else if (trip.logs && trip.logs.length > 0) {
+
+      // Set initial map region based on the trip data
+      if (trip.logs && trip.logs.length > 0) {
         const firstLogWithLocation = trip.logs.find((log) => log.location);
         if (firstLogWithLocation) {
           updateMapRegion(
@@ -54,45 +63,23 @@ export const MapsScreen = ({
           );
         }
       }
-      setSelectedTrip(trip);
-      setShowTripSelection(false);
-      // Small delay to ensure state updates are applied
-      setTimeout(() => {
-        slideAnim.setValue(0);
-        Animated.timing(slideAnim, {
-          toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      }, 50);
     } catch (error) {
       console.error("Failed to load trip data:", error);
     }
   };
-  useEffect(() => {
-    if (homeSelectedTrip) {
-      loadTripData(homeSelectedTrip);
-    } else if (homeSelectedTrip === null && showTripSelection === false) {
-      // If explicitly set to null, show trip selection
-      setShowTripSelection(true);
-      setSelectedTrip(null);
-      setTripSpeedingPins([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeSelectedTrip]);
 
   const handleBackToTripSelection = () => {
-    setTripSpeedingPins([]);
+    // Slide out map view first
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 150,
       easing: Easing.in(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
+      // Then immediately show trip selection
       setSelectedTrip(null);
+      setTripSpeedingPins([]);
       setShowTripSelection(true);
-      if (setHomeSelectedTrip) setHomeSelectedTrip(null);
     });
   };
 

@@ -87,6 +87,7 @@ export const LiveScreen = ({
   const dataInterval = useRef(null);
   const lastFetchFailed = useRef(false);
   const bannerShown = useRef(false);
+  const lastStreetName = useRef(null);
 
   console.log("Speeding threshold on LiveScreen:", speedingThreshold);
 
@@ -125,8 +126,7 @@ export const LiveScreen = ({
     if (isConnected) {
       console.log("Starting data polling...");
       fetchData();
-      dataInterval.current = setInterval(fetchData, 1000); // Poll every second
-    } else {
+      dataInterval.current = setInterval(fetchData, 1000); // Poll every second    } else {
       console.log("Stopping data polling...");
       if (dataInterval.current) {
         clearInterval(dataInterval.current);
@@ -134,9 +134,6 @@ export const LiveScreen = ({
       }
       setObd2Data({ speed: 0, rpm: 0, throttle: 0 });
       setSpeedHistory([]);
-      if (isLogging) {
-        setIsLogging(false); // Auto-stop logging
-      }
       setIsApiConnected(false);
       lastFetchFailed.current = false;
     }
@@ -147,16 +144,39 @@ export const LiveScreen = ({
       }
     };
   }, [isConnected]);
-
   useEffect(() => {
     if (isLogging) {
-      startLogging("real");
+      startLogging("real", { streetName });
     } else {
-      stopLogging("real").then(() => {
-        analyzeLogs();
-      });
+      stopLogging("real", { lastStreetName: lastStreetName.current }).then(
+        () => {
+          analyzeLogs();
+        }
+      );
     }
-  }, [isLogging]);
+  }, [isLogging, streetName]);
+
+  // Update last street name reference
+  useEffect(() => {
+    if (streetName) {
+      lastStreetName.current = streetName;
+    }
+  }, [streetName]);
+
+  // Handle connection state changes for logging markers
+  useEffect(() => {
+    const handleConnectionChange = async () => {
+      if (isDataAvailable && !isLogging) {
+        // Auto-start logging when connection is established
+        setIsLogging(true);
+      } else if (!isDataAvailable && isLogging) {
+        // Auto-stop logging when connection is lost
+        setIsLogging(false);
+      }
+    };
+
+    handleConnectionChange();
+  }, [isDataAvailable]);
 
   useEffect(() => {
     const fetchSpeedLimit = async () => {
@@ -185,16 +205,9 @@ export const LiveScreen = ({
       });
     }
   }, [isLogging, obd2Data, location, streetName, speedLimit]);
-
   const fetchData = async () => {
     if (isWicanSimulated) {
       console.log("Fetching simulated data...");
-      if (!isLogging) {
-        setIsLogging(true);
-      }
-      if (!isApiConnected) {
-        setIsApiConnected(true);
-      }
       const newObd2Data = {
         speed: Math.floor(60 + Math.random() * 10 - 5),
         rpm: Math.floor(2000 + Math.random() * 500 - 250),
@@ -219,9 +232,6 @@ export const LiveScreen = ({
       try {
         const newObd2Data = await fetchWicanData();
         console.log("Received WiCAN data:", newObd2Data);
-        if (!isLogging) {
-          setIsLogging(true);
-        }
         setObd2Data(newObd2Data);
         setSpeedHistory((prevHistory) => {
           const updatedHistory = [...prevHistory, newObd2Data.speed];

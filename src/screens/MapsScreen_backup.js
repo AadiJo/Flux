@@ -23,8 +23,6 @@ export const MapsScreen = ({
   appStreetName,
   speedingPins,
   updateSpeedingPinsFromLogs,
-  homeSelectedTrip,
-  setHomeSelectedTrip,
 }) => {
   const { theme, isDark } = useTheme();
   const { speedingThreshold } = useSettings();
@@ -35,64 +33,56 @@ export const MapsScreen = ({
   const [tripSpeedingPins, setTripSpeedingPins] = useState([]);
 
   // Animation values
-  const slideAnim = useRef(new Animated.Value(0)).current; // Load trip data when a trip is selected
-  const loadTripData = async (trip) => {
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  // Initialize animations
+  useEffect(() => {
+    // Always ensure proper initial state
+    slideAnim.setValue(0);
+    fadeAnim.setValue(showTripSelection ? 1 : 0);
+  }, [showTripSelection]);
+  // Load trip data when a trip is selected  const loadTripData = async (trip) => {
     try {
-      console.log("Loading trip data for:", trip.roadName);
-      // Load pins first
+      setShowTripSelection(false);
+      setSelectedTrip(trip);
+      
+      // Start with map view off-screen and slide in
+      slideAnim.setValue(0);
+      Animated.timing(slideAnim, {
+        toValue: 1,
+        duration: 200,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start();
+
       const pins = await getSpeedingPinsForTrip(speedingThreshold, trip);
       setTripSpeedingPins(pins);
-      // Set initial map region based on pins or logs
-      if (pins && pins.length > 0) {
-        updateMapRegion(pins[0].latitude, pins[0].longitude);
-      } else if (trip.logs && trip.logs.length > 0) {
+
+      // Set initial map region based on the trip data
+      if (trip.logs && trip.logs.length > 0) {
         const firstLogWithLocation = trip.logs.find((log) => log.location);
         if (firstLogWithLocation) {
           updateMapRegion(
-            firstLogWithLocation.location.latitude,
-            firstLogWithLocation.location.longitude
+            firstLogWithLocation.location.latitude,            firstLogWithLocation.location.longitude
           );
         }
       }
-      setSelectedTrip(trip);
-      setShowTripSelection(false);
-      // Small delay to ensure state updates are applied
-      setTimeout(() => {
-        slideAnim.setValue(0);
-        Animated.timing(slideAnim, {
-          toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      }, 50);
     } catch (error) {
       console.error("Failed to load trip data:", error);
     }
   };
-  useEffect(() => {
-    if (homeSelectedTrip) {
-      loadTripData(homeSelectedTrip);
-    } else if (homeSelectedTrip === null && showTripSelection === false) {
-      // If explicitly set to null, show trip selection
-      setShowTripSelection(true);
-      setSelectedTrip(null);
-      setTripSpeedingPins([]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeSelectedTrip]);
-
   const handleBackToTripSelection = () => {
-    setTripSpeedingPins([]);
+    // Slide out map view first
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 150,
       easing: Easing.in(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
+      // Then immediately show trip selection
       setSelectedTrip(null);
+      setTripSpeedingPins([]);
       setShowTripSelection(true);
-      if (setHomeSelectedTrip) setHomeSelectedTrip(null);
     });
   };
 
@@ -109,8 +99,7 @@ export const MapsScreen = ({
   }, []);
 
   // Animate map when region changes
-  useEffect(() => {
-    if (region && mapRef.current) {
+  useEffect(() => {    if (region && mapRef.current) {
       mapRef.current.animateToRegion(region, 500);
     }
   }, [region]);
@@ -121,9 +110,7 @@ export const MapsScreen = ({
       const { latitude, longitude } = appLocation.coords;
       updateMapRegion(latitude, longitude);
     }
-  }, [appLocation, updateMapRegion, selectedTrip]);
-
-  // Show trip selection modal
+  }, [appLocation, updateMapRegion, selectedTrip]);  // Show trip selection modal
   if (showTripSelection) {
     return <TripSelectionModal onSelectTrip={loadTripData} />;
   }
@@ -139,8 +126,7 @@ export const MapsScreen = ({
             Loading...
           </Text>
         </View>
-      </SafeAreaView>
-    );
+      </SafeAreaView>    );
   }
 
   return (
@@ -148,16 +134,14 @@ export const MapsScreen = ({
       style={[
         { flex: 1 },
         {
-          transform: [
-            {
-              translateX: slideAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [Dimensions.get("window").width, 0],
-              }),
-            },
-          ],
-          opacity: slideAnim,
-        },
+          transform: [{
+            translateX: slideAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [Dimensions.get('window').width, 0]
+            })
+          }],
+          opacity: slideAnim
+        }
       ]}
     >
       <StatusBar
@@ -171,7 +155,7 @@ export const MapsScreen = ({
           provider={PROVIDER_DEFAULT}
           style={styles.map}
           region={region}
-          showsUserLocation={!selectedTrip}
+          showsUserLocation={!selectedTrip} // Only show user location when not viewing a trip
           showsMyLocationButton={!selectedTrip}
           showsCompass={false}
         >
@@ -293,10 +277,10 @@ const styles = StyleSheet.create({
     elevation: 5,
     margin: 8,
   },
-
+  
   streetName: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 16, 
+    fontWeight: "600", 
     textAlign: "center",
   },
   bannerContent: {

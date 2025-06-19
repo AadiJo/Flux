@@ -50,6 +50,7 @@ const AppContent = () => {
   const [location, setLocation] = useState(null);
   const [streetName, setStreetName] = useState(null);
   const [speedingPins, setSpeedingPins] = useState([]);
+  const [homeSelectedTrip, setHomeSelectedTrip] = useState(null);
 
   const updateSpeedingPinsFromLogs = async () => {
     const pins = await getSpeedingPins(speedingThreshold);
@@ -180,6 +181,8 @@ const AppContent = () => {
             appStreetName={streetName}
             speedingPins={speedingPins}
             updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
+            homeSelectedTrip={homeSelectedTrip}
+            setHomeSelectedTrip={setHomeSelectedTrip}
           />
         ) : (
           <View
@@ -192,6 +195,8 @@ const AppContent = () => {
               <HomeScreen
                 updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
                 showBanner={showBanner}
+                setSelectedMode={setSelectedMode}
+                setHomeSelectedTrip={setHomeSelectedTrip}
               />
             )}
             {selectedMode === "motion" && (

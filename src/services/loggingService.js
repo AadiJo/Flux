@@ -37,8 +37,57 @@ export const initializeLogging = async () => {
   }
 };
 
+// Function to log connection state markers
+const logConnectionMarker = async (logType, state, additionalData = {}) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return;
+  }
+
+  const logger = loggers[logType];
+  const markerEntry = {
+    timestamp: new Date().toISOString(),
+    type: "CONNECTION_MARKER",
+    state: state, // "CONNECTED" or "DISCONNECTED"
+    message: `Scanning ${state.toLowerCase()} - ${
+      state === "CONNECTED" ? "started" : "stopped"
+    } logging session`,
+    ...additionalData,
+  };
+
+  // Add street name from additional data
+  if (additionalData.streetName) {
+    markerEntry.streetName = additionalData.streetName;
+  } else if (additionalData.lastStreetName) {
+    markerEntry.streetName = additionalData.lastStreetName;
+  }
+
+  try {
+    // Read existing content
+    let existingContent = "";
+    const fileInfo = await FileSystem.getInfoAsync(logger.uri);
+    if (fileInfo.exists) {
+      existingContent = await FileSystem.readAsStringAsync(logger.uri, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+    }
+
+    // Append new marker entry
+    const newContent = existingContent + JSON.stringify(markerEntry) + "\n";
+
+    // Write the updated content back to the file
+    await FileSystem.writeAsStringAsync(logger.uri, newContent, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    console.log(`Connection marker logged for ${logType}: ${state}`);
+  } catch (error) {
+    console.error(`Failed to write connection marker for ${logType}:`, error);
+  }
+};
+
 // Function to start a new logging session
-export const startLogging = async (logType) => {
+export const startLogging = async (logType, additionalData = {}) => {
   if (!loggers[logType]) {
     console.error("Invalid log type:", logType);
     return;
@@ -51,18 +100,27 @@ export const startLogging = async (logType) => {
       JSON.stringify(true)
     );
     console.log(`Logging started and state saved for ${logType}.`);
+
+    // Log connection start marker
+    await logConnectionMarker(logType, "CONNECTED", additionalData);
   } catch (error) {
     console.error(`Failed to save logging state for ${logType}:`, error);
   }
 };
 
 // Function to stop the logging session
-export const stopLogging = async (logType) => {
+export const stopLogging = async (logType, additionalData = {}) => {
   if (!loggers[logType]) {
     console.error("Invalid log type:", logType);
     return;
   }
   const logger = loggers[logType];
+
+  // Log disconnection marker before stopping
+  if (logger.isLoggingActive) {
+    await logConnectionMarker(logType, "DISCONNECTED", additionalData);
+  }
+
   logger.isLoggingActive = false;
   try {
     await AsyncStorage.setItem(
@@ -181,6 +239,97 @@ export const getLogs = async (logType) => {
     return logEntries;
   } catch (error) {
     console.error(`Failed to read log file for ${logType}:`, error);
+    return [];
+  }
+};
+
+/**
+ * Extracts trips from logs based on connection markers
+ * A trip is defined as the period between a CONNECTED and DISCONNECTED marker
+ */
+export const getTripsFromLogs = async (logType) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return [];
+  }
+
+  try {
+    const logs = await getLogs(logType);
+    const trips = [];
+    let currentTrip = null;
+
+    for (const log of logs) {
+      if (log.type === "CONNECTION_MARKER") {
+        if (log.state === "CONNECTED") {
+          // Start a new trip
+          currentTrip = {
+            id: trips.length + 1,
+            startTime: log.timestamp,
+            startMessage: log.message,
+            endTime: null,
+            endMessage: null,
+            roadName: null,
+            logs: [],
+          };
+        } else if (log.state === "DISCONNECTED" && currentTrip) {
+          // End the current trip
+          currentTrip.endTime = log.timestamp;
+          currentTrip.endMessage = log.message;
+
+          // Extract road name from disconnect marker if available
+          if (log.streetName) {
+            currentTrip.roadName = log.streetName;
+          } else {
+            // Try to get road name from the last log entry with street name
+            const lastLogWithStreet = currentTrip.logs
+              .slice()
+              .reverse()
+              .find((logEntry) => logEntry.streetName);
+            if (lastLogWithStreet) {
+              currentTrip.roadName = lastLogWithStreet.streetName;
+            } else {
+              currentTrip.roadName = "Unknown Road";
+            }
+          }
+
+          trips.push(currentTrip);
+          currentTrip = null;
+        }
+      } else if (currentTrip) {
+        // Add regular log entries to the current trip
+        currentTrip.logs.push(log);
+      }
+    }
+
+    // If there's an ongoing trip (no disconnect marker yet), add it
+    if (currentTrip) {
+      currentTrip.roadName = "Current Trip";
+      trips.push(currentTrip);
+    }
+
+    return trips;
+  } catch (error) {
+    console.error(`Failed to extract trips from ${logType} logs:`, error);
+    return [];
+  }
+};
+
+/**
+ * Gets all trips from both sim and real logs
+ */
+export const getAllTrips = async () => {
+  try {
+    const simTrips = await getTripsFromLogs("sim");
+    const realTrips = await getTripsFromLogs("real");
+
+    // Combine and sort by start time (newest first)
+    const allTrips = [...simTrips, ...realTrips].sort(
+      (a, b) => new Date(b.startTime) - new Date(a.startTime)
+    );
+
+    return allTrips;
+  } catch (error) {
+    console.error("Failed to get all trips:", error);
     return [];
   }
 };

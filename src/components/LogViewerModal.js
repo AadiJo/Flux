@@ -84,12 +84,68 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
       onClose();
     });
   };
-
   const renderLogEntry = (entry, index) => {
     if (!entry) {
       return null;
     }
 
+    // Handle connection markers differently
+    if (entry.type === "CONNECTION_MARKER") {
+      const isConnected = entry.state === "CONNECTED";
+      const backgroundColor = isConnected
+        ? "rgba(76, 175, 80, 0.2)" // Green for connected
+        : "rgba(244, 67, 54, 0.2)"; // Red for disconnected
+
+      return (
+        <View
+          key={index}
+          style={[
+            styles.logEntryContainer,
+            styles.connectionMarkerContainer,
+            { backgroundColor },
+          ]}
+        >
+          <View style={styles.connectionMarkerHeader}>
+            <Ionicons
+              name={isConnected ? "link" : "unlink"}
+              size={20}
+              color={isConnected ? "#4CAF50" : "#F44336"}
+            />
+            <Text
+              style={[
+                styles.connectionMarkerTitle,
+                { color: isConnected ? "#4CAF50" : "#F44336" },
+              ]}
+            >
+              {entry.state}
+            </Text>
+          </View>
+          <Text style={[styles.logTimestamp, { color: theme.text }]}>
+            {new Date(entry.timestamp).toLocaleString()}
+          </Text>
+          <Text
+            style={[
+              styles.connectionMarkerMessage,
+              { color: theme.textSecondary },
+            ]}
+          >
+            {entry.message}
+          </Text>
+          {entry.streetName && (
+            <Text style={[styles.logText, { color: theme.textSecondary }]}>
+              Street: {entry.streetName}
+            </Text>
+          )}
+          {entry.lastStreetName && (
+            <Text style={[styles.logText, { color: theme.textSecondary }]}>
+              Last Street: {entry.lastStreetName}
+            </Text>
+          )}
+        </View>
+      );
+    }
+
+    // Handle regular data entries
     const { timestamp, obd2Data, location, streetName, speedLimit } = entry;
     const isSpeeding =
       obd2Data?.speed &&
@@ -191,6 +247,26 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 5,
     backgroundColor: "rgba(0,0,0,0.05)",
+  },
+  connectionMarkerContainer: {
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: "rgba(0,0,0,0.2)",
+  },
+  connectionMarkerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  connectionMarkerTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+  connectionMarkerMessage: {
+    fontSize: 14,
+    fontStyle: "italic",
+    marginBottom: 5,
   },
   logTimestamp: {
     fontWeight: "bold",
