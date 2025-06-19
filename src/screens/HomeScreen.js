@@ -7,6 +7,7 @@ import {
   ScrollView,
   SafeAreaView,
   Platform,
+  StatusBar,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { CircularProgress } from "../components/CircularProgress";
@@ -76,7 +77,11 @@ export const HomeScreen = ({
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.background }}
+      style={{
+        flex: 1,
+        backgroundColor: theme.background,
+        paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+      }}
       edges={["top"]}
     >
       <ScrollView
@@ -337,9 +342,9 @@ export const HomeScreen = ({
                         ]}
                       >
                         {badEventsCounts[index] > 0
-                          ? `${badEventsCounts[index]} bad event${
-                              badEventsCounts[index] > 1 ? "s" : ""
-                            }`
+                          ? badEventsCounts[index] === 1
+                            ? "1 bad event"
+                            : `${badEventsCounts[index]} bad events`
                           : "No issues"}
                       </Text>
                     </View>

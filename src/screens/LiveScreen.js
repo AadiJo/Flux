@@ -8,6 +8,7 @@ import {
   Alert,
   Dimensions,
   Animated,
+  Platform,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
@@ -317,15 +318,12 @@ export const LiveScreen = ({
         const mostRecentTimestamp = Math.max(
           ...newUniquePins.map((pin) => new Date(pin.timestamp).getTime())
         );
+        const eventText =
+          newUniquePins.length === 1
+            ? "1 new speeding event has been marked on the map."
+            : `${newUniquePins.length} new speeding events have been marked on the map.`;
 
-        Alert.alert(
-          "Speeding Detected",
-          `${newUniquePins.length} new speeding event${
-            newUniquePins.length === 1 ? "" : "s"
-          } ${
-            newUniquePins.length === 1 ? "has" : "have"
-          } been marked on the map.`
-        );
+        Alert.alert("Speeding Detected", eventText);
         // Update the last alert timestamp
         await AsyncStorage.setItem(
           LAST_ALERT_KEY,
@@ -349,7 +347,7 @@ export const LiveScreen = ({
         strength !== undefined ? `${strength}%` : "N/A"
       }\nBSSID: ${bssid || "N/A"}\nFrequency: ${
         frequency !== undefined ? `${frequency} MHz` : "N/A"
-      }\nSubnet: ${subnet || "N/A"}`;
+      }\nSubnet: ${subnet || "N/A"}`.toString(); // Ensure infoString is a valid string
       Alert.alert("Network Debug", infoString);
     } else {
       Alert.alert(
@@ -506,8 +504,9 @@ export const LiveScreen = ({
                 {
                   backgroundColor: theme.isDark
                     ? "rgba(255, 255, 255, 0.15)"
-                    : "rgba(0, 0, 0, 0.08)",
+                    : "rgba(0, 0, 0, 0.15)", // Darkened background for Android
                   shadowColor: theme.shadow,
+                  elevation: Platform.OS === "android" ? 0 : 2, // Remove elevation for Android
                 },
               ]}
               onPress={onOpenWifiModal}

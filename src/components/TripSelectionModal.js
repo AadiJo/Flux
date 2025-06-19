@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  StatusBar,
+  Platform,
 } from "react-native";
 import { useTheme } from "../contexts/ThemeContext";
 import { getAllTrips } from "../services/loggingService";
@@ -147,6 +149,8 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.1)",
+    paddingTop:
+      Platform.OS === "android" ? 20 + (StatusBar.currentHeight || 0) : 20,
   },
   title: {
     fontSize: 24,

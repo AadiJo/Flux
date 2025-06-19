@@ -90,36 +90,16 @@ export default function WifiSelectionModal({
       onClose();
     });
   };
-
   const scanNetworks = async () => {
     try {
       setScanning(true);
-
-      if (Platform.OS === "android") {
-        handleClose();
-        setTimeout(() => {
-          Alert.alert(
-            "Connect to WiFi",
-            "To retrieve data from your OBD connector, please connect to its network.",
-            [
-              {
-                text: "Open Settings",
-                onPress: () => {
-                  Linking.openSettings();
-                },
-              },
-              {
-                text: "Cancel",
-                style: "cancel",
-              },
-            ]
-          );
-        }, 300);
-      }
+      // Remove Android-specific behavior - show the same UI for both platforms
     } catch (error) {
-      Alert.alert("Error", "Failed to open settings: " + error.message, [
-        { text: "OK" },
-      ]);
+      Alert.alert(
+        "Error",
+        `Failed to open settings: ${error.message}`.toString(),
+        [{ text: "OK" }]
+      );
     } finally {
       setScanning(false);
     }
@@ -165,7 +145,6 @@ export default function WifiSelectionModal({
               <Ionicons name="close" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
           </View>
-
           <View style={styles.iosMessageContainer}>
             <Ionicons name="wifi" size={48} color={theme.primary} />
             <Text style={[styles.iosMessageTitle, { color: theme.text }]}>
@@ -177,15 +156,18 @@ export default function WifiSelectionModal({
               To retrieve data from your OBD connector, please connect to its
               network.
             </Text>
+
             <TouchableOpacity
               style={[
                 styles.iosSettingsButton,
                 { backgroundColor: theme.primary },
               ]}
               onPress={() => {
-                Platform.OS === "ios"
-                  ? Linking.openURL("App-Prefs:root=WIFI")
-                  : Linking.openSettings();
+                if (Platform.OS === "ios") {
+                  Linking.openURL("App-Prefs:root=WIFI");
+                } else {
+                  Linking.sendIntent("android.settings.WIFI_SETTINGS");
+                }
                 handleClose();
               }}
             >
