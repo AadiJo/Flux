@@ -15,11 +15,14 @@ const loggers = {
   sim: {
     uri: FileSystem.documentDirectory + "sim_session_logs.jsonl",
     isLoggingActive: false,
+    lastSpeed: null,
+    lastTimestamp: null,
   },
   real: {
     uri: FileSystem.documentDirectory + "real_session_logs.jsonl",
     isLoggingActive: false,
     lastSpeed: null,
+    lastTimestamp: null,
   },
 };
 
@@ -174,9 +177,30 @@ export const logData = async (logType, data) => {
     return;
   }
 
+  // Calculate acceleration
+  let acceleration = null;
+  const currentTimestamp = new Date();
+  const currentSpeed = data.obd2Data?.speed;
+
+  if (
+    currentSpeed !== null &&
+    currentSpeed !== undefined &&
+    logger.lastSpeed !== null &&
+    logger.lastTimestamp !== null
+  ) {
+    const timeDifference = (currentTimestamp - logger.lastTimestamp) / 1000; // Convert to seconds
+    if (timeDifference > 0) {
+      // Acceleration in mph/s
+      acceleration = (currentSpeed - logger.lastSpeed) / timeDifference;
+      // Round to 2 decimal places for cleaner data
+      acceleration = Math.round(acceleration * 100) / 100;
+    }
+  }
+
   const logEntry = {
-    timestamp: new Date().toISOString(),
+    timestamp: currentTimestamp.toISOString(),
     ...data,
+    acceleration: acceleration, // Add acceleration to log entry
   };
 
   try {
@@ -190,16 +214,15 @@ export const logData = async (logType, data) => {
     }
 
     // Append new log entry
-    const newContent = existingContent + JSON.stringify(logEntry) + "\n";
-
-    // Write the updated content back to the file
+    const newContent = existingContent + JSON.stringify(logEntry) + "\n"; // Write the updated content back to the file
     await FileSystem.writeAsStringAsync(logger.uri, newContent, {
       encoding: FileSystem.EncodingType.UTF8,
     });
 
-    // Update last logged speed
-    if (logType === "real" && data.obd2Data) {
-      logger.lastSpeed = data.obd2Data.speed;
+    // Update last logged speed and timestamp for acceleration calculation
+    if (data.obd2Data && currentSpeed !== null && currentSpeed !== undefined) {
+      logger.lastSpeed = currentSpeed;
+      logger.lastTimestamp = currentTimestamp;
     }
   } catch (error) {
     console.error(`Failed to write to log file for ${logType}:`, error);
@@ -218,9 +241,9 @@ export const clearLogs = async (logType) => {
   try {
     await FileSystem.deleteAsync(logger.uri, { idempotent: true });
     console.log(`Log file for ${logType} deleted.`);
-    if (logType === "real") {
-      logger.lastSpeed = null;
-    }
+    // Reset tracking data when clearing logs
+    logger.lastSpeed = null;
+    logger.lastTimestamp = null;
   } catch (error) {
     console.error(`Failed to delete log file for ${logType}:`, error);
   }

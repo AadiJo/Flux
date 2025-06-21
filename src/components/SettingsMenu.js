@@ -18,6 +18,7 @@ import * as FileSystem from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
 import { getStoredProtocol } from "../services/protocolDetectionService";
+import { migrateAllLogs } from "../utils/logMigration";
 
 const SettingButton = ({ label, icon, onPress, theme }) => (
   <TouchableOpacity
@@ -69,8 +70,13 @@ export const SettingsMenu = ({
 
       // Fetch the stored protocol when menu opens
       const fetchProtocol = async () => {
-        const protocol = await getStoredProtocol();
-        setProtocolId(protocol);
+        try {
+          const protocol = await getStoredProtocol();
+          setProtocolId(protocol);
+        } catch (error) {
+          console.error("Error fetching protocol:", error);
+          setProtocolId(null);
+        }
       };
       fetchProtocol();
 
@@ -158,7 +164,46 @@ export const SettingsMenu = ({
     onClose();
   };
 
+  const handleMigrateLogs = async () => {
+    Alert.alert(
+      "Migrate Logs",
+      "This will add acceleration data to all existing log entries. This process may take a few moments.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Migrate",
+          onPress: async () => {
+            try {
+              const result = await migrateAllLogs();
+              if (result.sim || result.real) {
+                Alert.alert(
+                  "Migration Complete",
+                  "Log files have been successfully updated with acceleration data."
+                );
+              } else {
+                Alert.alert(
+                  "Migration Info",
+                  "No log files found to migrate or they already contain acceleration data."
+                );
+              }
+            } catch (error) {
+              console.error("Migration error:", error);
+              Alert.alert(
+                "Migration Error",
+                "Failed to migrate log files. Please try again."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (!showingModal) return null;
+  
   return (
     <Modal
       visible={showingModal}
@@ -228,7 +273,10 @@ export const SettingsMenu = ({
                     { color: theme.text, borderColor: theme.border },
                   ]}
                   value={String(localThreshold)}
-                  onChangeText={(text) => setLocalThreshold(Number(text) || 0)}
+                  onChangeText={(text) => {
+                    const numValue = parseInt(text, 10);
+                    setLocalThreshold(isNaN(numValue) ? 0 : numValue);
+                  }}
                   keyboardType="number-pad"
                   textAlign="center"
                 />
@@ -244,7 +292,9 @@ export const SettingsMenu = ({
                 </TouchableOpacity>
               </View>
             </View>
+            
             <View style={styles.separator} />
+            
             <View style={styles.logActions}>
               <SettingButton
                 label="Import Sim"
@@ -259,6 +309,7 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
+            
             <View style={styles.logActions}>
               <SettingButton
                 label="Import Real"
@@ -273,7 +324,20 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
+            
             <View style={styles.separator} />
+            
+            <View style={styles.logActions}>
+              <SettingButton
+                label="Migrate Logs"
+                icon="database-sync-outline"
+                onPress={handleMigrateLogs}
+                theme={theme}
+              />
+            </View>
+            
+            <View style={styles.separator} />
+            
             <View style={styles.logActions}>
               <SettingButton
                 label="Score Debug"
@@ -287,12 +351,15 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
+            
             <View style={styles.separator} />
+            
             <Text style={[styles.protocolText, { color: theme.textSecondary }]}>
               {protocolId
                 ? `OBD Protocol: ${protocolId}`
                 : "No OBD Protocol Configured"}
             </Text>
+            
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={[styles.closeButtonText, { color: theme.primary }]}>
                 Done

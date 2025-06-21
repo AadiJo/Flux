@@ -6,6 +6,7 @@ import {
 } from "../services/scoringService";
 import { useSettings } from "../contexts/SettingsContext";
 import { scoreManager } from "../utils/scoreManager";
+import { getScoreGradientColor } from "../utils/scoreColorUtils";
 
 /**
  * Custom hook for managing safety score data
@@ -136,14 +137,9 @@ export const useSafetyScore = () => {
     hasData: !!scoreData && scoreData.tripsAnalyzed > 0,
     formattedLastUpdated: scoreData?.lastUpdated
       ? new Date(scoreData.lastUpdated).toLocaleString()
-      : null,
-
-    // Helper functions for display
+      : null, // Helper functions for display
     getScoreColor: (score) => {
-      if (score >= 90) return "#4CAF50"; // Green
-      if (score >= 75) return "#FF9800"; // Orange
-      if (score >= 60) return "#F44336"; // Red
-      return "#9E9E9E"; // Gray
+      return getScoreGradientColor(score);
     },
 
     getScoreGrade: (score) => {

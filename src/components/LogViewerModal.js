@@ -84,6 +84,7 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
       onClose();
     });
   };
+
   const renderLogEntry = (entry, index) => {
     if (!entry) {
       return null;
@@ -146,7 +147,14 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
     }
 
     // Handle regular data entries
-    const { timestamp, obd2Data, location, streetName, speedLimit } = entry;
+    const {
+      timestamp,
+      obd2Data,
+      location,
+      streetName,
+      speedLimit,
+      acceleration,
+    } = entry;
     const isSpeeding =
       obd2Data?.speed &&
       speedLimit &&
@@ -168,6 +176,17 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
           {obd2Data?.rpm?.toFixed(2)}, Throttle:{" "}
           {obd2Data?.throttle?.toFixed(2)}%
         </Text>
+        {acceleration !== null && acceleration !== undefined && (
+          <Text style={[styles.logText, { color: theme.textSecondary }]}>
+            Acceleration: {acceleration > 0 ? "+" : ""}
+            {acceleration?.toFixed(2)} mph/s
+            {acceleration > 0
+              ? " (accelerating)"
+              : acceleration < 0
+              ? " (braking)"
+              : " (steady)"}
+          </Text>
+        )}
         <Text style={[styles.logText, { color: theme.textSecondary }]}>
           Location: {location?.latitude?.toFixed(4)},{" "}
           {location?.longitude?.toFixed(4)}
@@ -208,7 +227,9 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
             {logs && logs.length > 0 ? (
               logs.map(renderLogEntry).reverse()
             ) : (
-              <Text style={{ color: theme.text }}>No logs available.</Text>
+              <Text style={[styles.emptyText, { color: theme.text }]}>
+                No logs available.
+              </Text>
             )}
           </ScrollView>
         </Animated.View>
@@ -274,6 +295,11 @@ const styles = StyleSheet.create({
   },
   logText: {
     fontSize: 14,
+  },
+  emptyText: {
+    textAlign: "center",
+    fontSize: 16,
+    marginTop: 20,
   },
 });
 

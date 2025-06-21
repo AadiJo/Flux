@@ -22,6 +22,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { useSafetyScore } from "../hooks/useSafetyScore";
 import { getAllTrips } from "../services/loggingService";
 import { getSpeedingPinsForTrip } from "../services/speedingService";
+import { getScoreGradientColor } from "../utils/scoreColorUtils";
 
 export const HomeScreen = ({
   updateSpeedingPinsFromLogs,
@@ -48,9 +49,9 @@ export const HomeScreen = ({
   const [showScoreDetails, setShowScoreDetails] = useState(false);
   const [recentTrips, setRecentTrips] = useState([]);
   const [badEventsCounts, setBadEventsCounts] = useState([]);
-
   // Use the calculated safety score instead of hardcoded value
   const safetyScore = scoreLoading ? null : overallScore;
+
   const scoreBreakdown =
     scoreLoading || !breakdown
       ? []
@@ -59,35 +60,25 @@ export const HomeScreen = ({
             title: "Speed Control",
             score: breakdown.speedControl,
             icon: "speedometer",
-            color: theme.primary,
+            color: getScoreGradientColor(breakdown.speedControl),
           },
           {
             title: "Braking",
             score: breakdown.braking,
             icon: "car-brake-hold",
-            color:
-              breakdown.braking >= 85
-                ? theme.success
-                : breakdown.braking >= 75
-                ? theme.warning
-                : theme.error,
+            color: getScoreGradientColor(breakdown.braking),
           },
           {
             title: "Steering",
             score: breakdown.steering,
             icon: "steering",
-            color: breakdown.steering >= 75 ? theme.success : theme.error,
+            color: getScoreGradientColor(breakdown.steering),
           },
           {
             title: "Aggression",
             score: breakdown.aggression,
             icon: "car-emergency",
-            color:
-              breakdown.aggression >= 85
-                ? theme.success
-                : breakdown.aggression >= 75
-                ? theme.warning
-                : theme.error,
+            color: getScoreGradientColor(breakdown.aggression),
           },
         ];
 
@@ -235,7 +226,10 @@ export const HomeScreen = ({
               strokeWidth={12}
               progress={safetyScore || 0}
               score={safetyScore || 0}
-              gradientColors={[theme.primary, theme.success]}
+              gradientColors={[
+                getScoreGradientColor(safetyScore || 0),
+                getScoreGradientColor(safetyScore || 0),
+              ]}
             />
             <Text style={[styles.scoreLabel, { color: theme.textSecondary }]}>
               Your Safety Score
