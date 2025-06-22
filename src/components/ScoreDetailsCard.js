@@ -1,11 +1,18 @@
-import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState, useRef } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Dimensions,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSafetyScore } from "../hooks/useSafetyScore";
 
 /**
- * Component for displaying detailed safety score information
+ * Component for displaying detailed safety score information in a carousel format
  * Can be used in modals or dedicated screens
  */
 export const ScoreDetailsCard = ({ onClose, style }) => {
@@ -22,6 +29,56 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
     formattedLastUpdated,
     forceRefresh,
   } = useSafetyScore();
+  const [currentPage, setCurrentPage] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const scrollViewRef = useRef(null);
+  
+  const pages = [
+    { title: "Overview", icon: "chart-line" },
+    { title: "Speed", icon: "speedometer" },
+    { title: "Braking", icon: "car-brake-hold" },
+    { title: "Safety", icon: "shield-check" },
+  ];
+
+  const formatDuration = (seconds) => {
+    if (!seconds || seconds < 60) return `${Math.round(seconds || 0)}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.round(seconds % 60);
+    return `${minutes}m ${remainingSeconds}s`;
+  };
+
+  const handlePageChange = (pageIndex) => {
+    setCurrentPage(pageIndex);
+    scrollViewRef.current?.scrollTo({
+      x: pageIndex * containerWidth,
+      animated: true,
+    });
+  };
+
+  const onScroll = (event) => {
+    if (containerWidth > 0) {
+      const pageIndex = Math.round(
+        event.nativeEvent.contentOffset.x / containerWidth
+      );
+      if (pageIndex !== currentPage) {
+        setCurrentPage(pageIndex);
+      }
+    }
+  };
+
+  const onScrollEnd = (event) => {
+    if (containerWidth > 0) {
+      const pageIndex = Math.round(
+        event.nativeEvent.contentOffset.x / containerWidth
+      );
+      setCurrentPage(pageIndex);
+    }
+  };
+
+  const onContainerLayout = (event) => {
+    const { width } = event.nativeEvent.layout;
+    setContainerWidth(width);
+  };
 
   if (loading) {
     return (
@@ -68,133 +125,327 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
     );
   }
 
-  const formatDuration = (seconds) => {
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round(seconds % 60);
-    return `${minutes}m ${remainingSeconds}s`;
-  };
+  // Overview Page Component
+  const OverviewPage = () => (
+    <View style={[styles.pageContainer, { width: containerWidth }]}>
+      <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+        <View style={styles.scoreHeader}>
+          <Text style={[styles.scoreValue, { color: theme.text }]}>
+            {overallScore || 0}
+          </Text>
+          <Text style={[styles.scoreGrade, { color: theme.primary }]}>
+            {`Grade: ${getScoreGrade ? getScoreGrade(overallScore) : 'N/A'}`}
+          </Text>
+          <Text style={[styles.scoreMessage, { color: theme.textSecondary }]}>
+            {getScoreMessage ? getScoreMessage(overallScore) : 'No message available'}
+          </Text>
+        </View>
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.card }, style]}>
-      {onClose && (
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <MaterialCommunityIcons
-            name="close"
-            size={24}
-            color={theme.textSecondary}
-          />
-        </TouchableOpacity>
-      )}
+        <View style={styles.breakdownSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Score Breakdown
+          </Text>
 
-      <View style={styles.scoreHeader}>
-        <Text style={[styles.scoreValue, { color: theme.text }]}>
-          {overallScore}
-        </Text>
-        <Text style={[styles.scoreGrade, { color: theme.primary }]}>
-          Grade: {getScoreGrade(overallScore)}
-        </Text>
-        <Text style={[styles.scoreMessage, { color: theme.textSecondary }]}>
-          {getScoreMessage(overallScore)}
-        </Text>
-      </View>
+          {breakdown && Object.entries(breakdown).map(([key, score]) => {
+            const icons = {
+              speedControl: "speedometer",
+              braking: "car-brake-hold",
+              steering: "steering",
+              aggression: "car-emergency",
+            };
 
-      <View style={styles.breakdownSection}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          Score Breakdown
-        </Text>
+            const labels = {
+              speedControl: "Speed Control",
+              braking: "Braking",
+              steering: "Steering",
+              aggression: "Aggression",
+            };
 
-        {Object.entries(breakdown).map(([key, score]) => {
-          const icons = {
-            speedControl: "speedometer",
-            braking: "car-brake-hold",
-            steering: "steering",
-            aggression: "car-emergency",
-          };
-
-          const labels = {
-            speedControl: "Speed Control",
-            braking: "Braking",
-            steering: "Steering",
-            aggression: "Aggression",
-          };
-
-          return (
-            <View key={key} style={styles.breakdownItem}>
-              <View style={styles.breakdownLeft}>
-                <MaterialCommunityIcons
-                  name={icons[key]}
-                  size={20}
-                  color={theme.primary}
-                />
-                <Text style={[styles.breakdownLabel, { color: theme.text }]}>
-                  {labels[key]}
+            return (
+              <View key={key} style={styles.breakdownItem}>
+                <View style={styles.breakdownLeft}>
+                  <MaterialCommunityIcons
+                    name={icons[key]}
+                    size={20}
+                    color={theme.primary}
+                  />
+                  <Text style={[styles.breakdownLabel, { color: theme.text }]}>
+                    {labels[key]}
+                  </Text>
+                </View>
+                <Text style={[styles.breakdownScore, { color: theme.text }]}>
+                  {score || 0}
                 </Text>
               </View>
-              <Text style={[styles.breakdownScore, { color: theme.text }]}>
-                {score}
+            );
+          })}
+        </View>
+
+        {formattedLastUpdated && (
+          <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>
+            {`Last updated: ${formattedLastUpdated}`}
+          </Text>
+        )}
+      </ScrollView>
+    </View>
+  );
+
+  // Speed Control Page Component
+  const SpeedControlPage = () => (
+    <View style={[styles.pageContainer, { width: containerWidth }]}>
+      <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+        <View style={styles.pageHeader}>
+          <MaterialCommunityIcons
+            name="speedometer"
+            size={48}
+            color={theme.primary}
+            style={styles.pageIcon}
+          />
+          <Text style={[styles.pageTitle, { color: theme.text }]}>
+            Speed Control
+          </Text>
+          <Text style={[styles.pageScore, { color: theme.primary }]}>
+            {`Score: ${breakdown?.speedControl || 0}`}
+          </Text>
+        </View>
+
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Speed Statistics
+          </Text>
+
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.speedingEvents || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Speeding Events
               </Text>
             </View>
-          );
-        })}
-      </View>
 
-      <View style={styles.metricsSection}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>
-          Driving Statistics
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.speedingPercentage || 0).toFixed(1)}%`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Time Speeding
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.averageSpeedDeviation || 0).toFixed(1)} mph`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Avg Speed Over
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {formatDuration(metrics?.speedingDuration)}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Total Duration
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+          Detailed speed control analysis coming soon...
         </Text>
+      </ScrollView>
+    </View>
+  );
 
-        <View style={styles.metricsGrid}>
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricValue, { color: theme.primary }]}>
-              {metrics.speedingEvents}
-            </Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-              Speeding Events
-            </Text>
-          </View>
+  // Braking Page Component
+  const BrakingPage = () => (
+    <View style={[styles.pageContainer, { width: containerWidth }]}>
+      <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+        <View style={styles.pageHeader}>
+          <MaterialCommunityIcons
+            name="car-brake-hold"
+            size={48}
+            color={theme.primary}
+            style={styles.pageIcon}
+          />
+          <Text style={[styles.pageTitle, { color: theme.text }]}>
+            Braking Analysis
+          </Text>
+          <Text style={[styles.pageScore, { color: theme.primary }]}>
+            {`Score: ${breakdown?.braking || 0}`}
+          </Text>
+        </View>
 
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricValue, { color: theme.primary }]}>
-              {metrics.speedingPercentage.toFixed(1)}%
-            </Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-              Time Speeding
-            </Text>
-          </View>
+        <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+          Detailed braking analysis including harsh braking events, smoothness
+          metrics, and improvement suggestions will be displayed here.
+        </Text>
+      </ScrollView>
+    </View>
+  );
 
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricValue, { color: theme.primary }]}>
-              {metrics.averageSpeedDeviation.toFixed(1)} mph
-            </Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-              Avg Speed Over
-            </Text>
-          </View>
+  // Safety Metrics Page Component
+  const SafetyMetricsPage = () => (
+    <View style={[styles.pageContainer, { width: containerWidth }]}>
+      <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+        <View style={styles.pageHeader}>
+          <MaterialCommunityIcons
+            name="shield-check"
+            size={48}
+            color={theme.primary}
+            style={styles.pageIcon}
+          />
+          <Text style={[styles.pageTitle, { color: theme.text }]}>
+            Safety Metrics
+          </Text>
+        </View>
 
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricValue, { color: theme.primary }]}>
-              {formatDuration(metrics.speedingDuration)}
-            </Text>
-            <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-              Total Duration
-            </Text>
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Additional Metrics
+          </Text>
+
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {breakdown?.steering || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Steering Score
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {breakdown?.aggression || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Aggression Score
+              </Text>
+            </View>
           </View>
+        </View>
+
+        <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+          Comprehensive safety analysis including aggressive driving patterns,
+          steering behavior, and overall safety trends will be available here.
+        </Text>
+      </ScrollView>
+    </View>
+  );
+
+  return (
+    <View
+      style={[styles.container, { backgroundColor: theme.card }, style]}
+      onLayout={onContainerLayout}
+    >
+      {/* Header with close button and page indicators */}
+      <View style={styles.header}>
+        {onClose && (
+          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <MaterialCommunityIcons
+              name="close"
+              size={24}
+              color={theme.textSecondary}
+            />
+          </TouchableOpacity>
+        )}
+
+        {/* Page Tabs */}
+        <View style={styles.tabContainer}>
+          {pages.map((page, index) => (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.tab,
+                {
+                  backgroundColor:
+                    currentPage === index ? theme.primary : "transparent",
+                  borderColor: theme.border,
+                },
+              ]}
+              onPress={() => handlePageChange(index)}
+            >
+              <MaterialCommunityIcons
+                name={page.icon}
+                size={16}
+                color={currentPage === index ? "white" : theme.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.tabText,
+                  {
+                    color:
+                      currentPage === index ? "white" : theme.textSecondary,
+                  },
+                ]}
+              >
+                {page.title}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      {formattedLastUpdated && (
-        <Text style={[styles.lastUpdated, { color: theme.textSecondary }]}>
-          Last updated: {formattedLastUpdated}
-        </Text>
+      {/* Scrollable Content */}
+      {containerWidth > 0 && (
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={onScroll}
+          onMomentumScrollEnd={onScrollEnd}
+          scrollEventThrottle={16}
+          style={styles.scrollView}
+          snapToInterval={containerWidth}
+          decelerationRate="fast"
+        >
+          <OverviewPage />
+          <SpeedControlPage />
+          <BrakingPage />
+          <SafetyMetricsPage />
+        </ScrollView>
       )}
+
+      {/* Page Indicator Dots */}
+      <View style={styles.pageIndicators}>
+        {pages.map((_, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.pageIndicator,
+              {
+                backgroundColor:
+                  currentPage === index ? theme.primary : theme.border,
+              },
+            ]}
+            onPress={() => handlePageChange(index)}
+          />
+        ))}
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
+    flex: 1,
     borderRadius: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -202,10 +453,84 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
+  },
   closeButton: {
     alignSelf: "flex-end",
     padding: 4,
+    marginBottom: 16,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  tab: {
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginHorizontal: 2,
+    minHeight: 60,
+    justifyContent: "center",
+  },
+  tabText: {
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  pageContainer: {
+    flex: 1,
+  },
+  page: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  pageHeader: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  pageIcon: {
     marginBottom: 8,
+  },
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  pageScore: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  pageIndicators: {
+    flexDirection: "row",
+    justifyContent: "center",
+    paddingVertical: 16,
+    gap: 8,
+  },
+  pageIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  placeholderText: {
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    paddingVertical: 20,
+    fontStyle: "italic",
   },
   loadingText: {
     textAlign: "center",

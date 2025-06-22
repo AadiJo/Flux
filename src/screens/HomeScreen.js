@@ -444,7 +444,6 @@ export const HomeScreen = ({
           )}
         </View>
       </ScrollView>
-
       {/* Modals */}
       <UserSelectionMenu
         visible={showUserMenu}
@@ -459,20 +458,23 @@ export const HomeScreen = ({
         visible={showPidScan}
         onClose={() => setShowPidScan(false)}
       />
-
       <Modal
         visible={showScoreDetails}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        animationType="fade"
+        presentationStyle="overFullScreen"
+        transparent={true}
         onRequestClose={() => setShowScoreDetails(false)}
       >
-        <View
-          style={[{ flex: 1, backgroundColor: theme.background, padding: 16 }]}
-        >
-          <ScoreDetailsCard
-            onClose={() => setShowScoreDetails(false)}
-            style={{ flex: 1 }}
-          />
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <ScoreDetailsCard
+              onClose={() => setShowScoreDetails(false)}
+              style={[
+                styles.modalContent,
+                { backgroundColor: theme.background },
+              ]}
+            />
+          </View>
         </View>
       </Modal>
     </SafeAreaView>
@@ -664,5 +666,23 @@ const styles = StyleSheet.create({
   recentTripsGroup: {
     width: "100%",
     paddingBottom: 24,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  modalContainer: {
+    width: "100%",
+    maxWidth: 500,
+    height: "90%",
+    maxHeight: 800,
+  },
+  modalContent: {
+    flex: 1,
+    borderRadius: 20,
+    overflow: "hidden",
   },
 });
