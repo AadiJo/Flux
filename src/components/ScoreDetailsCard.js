@@ -32,10 +32,11 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [containerWidth, setContainerWidth] = useState(0);
   const scrollViewRef = useRef(null);
-  
+
   const pages = [
     { title: "Overview", icon: "chart-line" },
     { title: "Speed", icon: "speedometer" },
+    { title: "Acceleration", icon: "speedometer-medium" },
     { title: "Braking", icon: "car-brake-hold" },
     { title: "Safety", icon: "shield-check" },
   ];
@@ -134,10 +135,12 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
             {overallScore || 0}
           </Text>
           <Text style={[styles.scoreGrade, { color: theme.primary }]}>
-            {`Grade: ${getScoreGrade ? getScoreGrade(overallScore) : 'N/A'}`}
+            {`Grade: ${getScoreGrade ? getScoreGrade(overallScore) : "N/A"}`}
           </Text>
           <Text style={[styles.scoreMessage, { color: theme.textSecondary }]}>
-            {getScoreMessage ? getScoreMessage(overallScore) : 'No message available'}
+            {getScoreMessage
+              ? getScoreMessage(overallScore)
+              : "No message available"}
           </Text>
         </View>
 
@@ -146,39 +149,44 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
             Score Breakdown
           </Text>
 
-          {breakdown && Object.entries(breakdown).map(([key, score]) => {
-            const icons = {
-              speedControl: "speedometer",
-              braking: "car-brake-hold",
-              steering: "steering",
-              aggression: "car-emergency",
-            };
+          {breakdown &&
+            Object.entries(breakdown).map(([key, score]) => {
+              const icons = {
+                speedControl: "speedometer",
+                acceleration: "speedometer-medium",
+                braking: "car-brake-hold",
+                steering: "steering",
+                aggression: "car-emergency",
+              };
 
-            const labels = {
-              speedControl: "Speed Control",
-              braking: "Braking",
-              steering: "Steering",
-              aggression: "Aggression",
-            };
+              const labels = {
+                speedControl: "Speed Control",
+                acceleration: "Acceleration",
+                braking: "Braking",
+                steering: "Steering",
+                aggression: "Aggression",
+              };
 
-            return (
-              <View key={key} style={styles.breakdownItem}>
-                <View style={styles.breakdownLeft}>
-                  <MaterialCommunityIcons
-                    name={icons[key]}
-                    size={20}
-                    color={theme.primary}
-                  />
-                  <Text style={[styles.breakdownLabel, { color: theme.text }]}>
-                    {labels[key]}
+              return (
+                <View key={key} style={styles.breakdownItem}>
+                  <View style={styles.breakdownLeft}>
+                    <MaterialCommunityIcons
+                      name={icons[key]}
+                      size={20}
+                      color={theme.primary}
+                    />
+                    <Text
+                      style={[styles.breakdownLabel, { color: theme.text }]}
+                    >
+                      {labels[key]}
+                    </Text>
+                  </View>
+                  <Text style={[styles.breakdownScore, { color: theme.text }]}>
+                    {score || 0}
                   </Text>
                 </View>
-                <Text style={[styles.breakdownScore, { color: theme.text }]}>
-                  {score || 0}
-                </Text>
-              </View>
-            );
-          })}
+              );
+            })}
         </View>
 
         {formattedLastUpdated && (
@@ -264,6 +272,130 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
         <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
           Detailed speed control analysis coming soon...
         </Text>
+      </ScrollView>
+    </View>
+  );
+
+  // Acceleration Page Component
+  const AccelerationPage = () => (
+    <View style={[styles.pageContainer, { width: containerWidth }]}>
+      <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
+        <View style={styles.pageHeader}>
+          <MaterialCommunityIcons
+            name="speedometer-medium"
+            size={48}
+            color={theme.primary}
+            style={styles.pageIcon}
+          />
+          <Text style={[styles.pageTitle, { color: theme.text }]}>
+            Acceleration Analysis
+          </Text>
+          <Text style={[styles.pageScore, { color: theme.primary }]}>
+            {`Score: ${breakdown?.acceleration || 0}`}
+          </Text>
+        </View>
+
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Acceleration Statistics
+          </Text>
+
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.totalAccelerationEvents || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Acceleration Events
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.averageAcceleration || 0).toFixed(1)} mph/s`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Average Acceleration
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.maxAcceleration || 0).toFixed(1)} mph/s`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Max Acceleration
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.harshAccelerationEvents || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Harsh Events
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.harshAccelerationPercentage || 0).toFixed(1)}%`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Harsh Event Rate
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.dataPointsWithAcceleration || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Data Points
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Score Formula
+          </Text>
+          <Text
+            style={[styles.placeholderText, { color: theme.textSecondary }]}
+          >
+            Acceleration scores are calculated using a piecewise linear function
+            based on your average acceleration patterns:
+            {"\n\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>Ideal Range (2-6 mph/s):</Text>{" "}
+            100 points
+            {"\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>
+              Too Gentle (&lt;2 mph/s):
+            </Text>{" "}
+            Linear penalty down to 1 point
+            {"\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>
+              Too Aggressive (&gt;6 mph/s):
+            </Text>{" "}
+            Linear penalty down to 1 point
+            {"\n\n"}
+            Your current average:{" "}
+            {(metrics?.averageAcceleration || 0).toFixed(1)} mph/s
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -418,6 +550,7 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
         >
           <OverviewPage />
           <SpeedControlPage />
+          <AccelerationPage />
           <BrakingPage />
           <SafetyMetricsPage />
         </ScrollView>

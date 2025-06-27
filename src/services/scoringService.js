@@ -42,6 +42,41 @@ const calculateSpeedScore = (
 };
 
 /**
+ * Calculate acceleration score using piecewise linear function
+ * Based on the formula from the attached scoring system documentation
+ *
+ * S(a) = {
+ *   1 + (a - alow_limit) / (amin_ideal - alow_limit) × 99,     if a < amin_ideal
+ *   100,                                                       if amin_ideal ≤ a ≤ amax_ideal
+ *   100 - (a - amax_ideal) / (ahigh_limit - amax_ideal) × 99,  if a > amax_ideal
+ * }
+ *
+ * Default parameters: alow_limit = 0, amin_ideal = 2, amax_ideal = 6, ahigh_limit = 12
+ */
+const calculateAccelerationScore = (
+  avgAcceleration,
+  aLowLimit = 0,
+  aMinIdeal = 2,
+  aMaxIdeal = 6,
+  aHighLimit = 12
+) => {
+  if (avgAcceleration < aMinIdeal) {
+    // Below ideal range
+    const score =
+      1 + ((avgAcceleration - aLowLimit) / (aMinIdeal - aLowLimit)) * 99;
+    return Math.max(1, Math.min(100, Math.round(score)));
+  } else if (avgAcceleration >= aMinIdeal && avgAcceleration <= aMaxIdeal) {
+    // Within ideal range
+    return 100;
+  } else {
+    // Above ideal range
+    const score =
+      100 - ((avgAcceleration - aMaxIdeal) / (aHighLimit - aMaxIdeal)) * 99;
+    return Math.max(1, Math.min(100, Math.round(score)));
+  }
+};
+
+/**
  * Calculate average speed deviation from trips
  * Only considers speeds that exceed the threshold (default 5 mph over limit)
  */
@@ -125,16 +160,151 @@ const calculateSpeedMetrics = (trips, speedingThreshold = 5) => {
 };
 
 /**
+ * Calculate acceleration metrics from trip data
+ * Uses the acceleration field stored in logs (positive values only for acceleration scoring)
+ */
+const calculateAccelerationMetrics = (trips) => {
+  let totalAccelerationEvents = 0;
+  let totalAcceleration = 0;
+  let maxAcceleration = 0;
+  let minAcceleration = 0;
+  let harshAccelerationEvents = 0;
+  let dataPointsWithAcceleration = 0;
+
+  console.log(`calculateAccelerationMetrics: Processing ${trips.length} trips`);
+
+  for (const trip of trips) {
+    if (!trip.logs || trip.logs.length === 0) {
+      console.log(`Trip ${trip.id || "unknown"} has no logs for acceleration`);
+      continue;
+    }
+
+    console.log(
+      `Processing acceleration for trip ${trip.id || "unknown"} with ${
+        trip.logs.length
+      } logs`
+    );
+    let logsSampled = 0;
+    let nullAccelerationCount = 0;
+    let zeroAccelerationCount = 0;
+    let negativeAccelerationCount = 0;
+    let positiveAccelerationCount = 0;
+
+    // Use the acceleration field already calculated and stored in logs
+    for (const log of trip.logs) {
+      const acceleration = log.acceleration;
+      logsSampled++;
+
+      if (acceleration === null || acceleration === undefined) {
+        nullAccelerationCount++;
+      } else if (acceleration === 0) {
+        zeroAccelerationCount++;
+      } else if (acceleration < 0) {
+        negativeAccelerationCount++;
+      } else if (acceleration > 0) {
+        positiveAccelerationCount++;
+        totalAcceleration += acceleration;
+        totalAccelerationEvents++;
+        dataPointsWithAcceleration++;
+
+        maxAcceleration = Math.max(maxAcceleration, acceleration);
+        minAcceleration =
+          minAcceleration === 0
+            ? acceleration
+            : Math.min(minAcceleration, acceleration);
+
+        // Count harsh acceleration events (> 8 mph/s as example threshold)
+        if (acceleration > 8) {
+          harshAccelerationEvents++;
+          console.log(
+            `Harsh acceleration event: ${acceleration.toFixed(2)} mph/s`
+          );
+        }
+
+        // Log first few positive acceleration values for debugging
+        if (positiveAccelerationCount <= 5) {
+          console.log(`Positive acceleration found: ${acceleration} mph/s`);
+        }
+      }
+    }
+
+    console.log(`Trip ${trip.id || "unknown"} acceleration summary:`);
+    console.log(`  - Total logs: ${logsSampled}`);
+    console.log(`  - Null/undefined acceleration: ${nullAccelerationCount}`);
+    console.log(`  - Zero acceleration: ${zeroAccelerationCount}`);
+    console.log(`  - Negative acceleration: ${negativeAccelerationCount}`);
+    console.log(`  - Positive acceleration: ${positiveAccelerationCount}`);
+  }
+
+  console.log(
+    `calculateAccelerationMetrics: Final results - totalAccelerationEvents: ${totalAccelerationEvents}, averageAcceleration: ${
+      totalAccelerationEvents > 0
+        ? (totalAcceleration / totalAccelerationEvents).toFixed(2)
+        : 0
+    } mph/s, harshEvents: ${harshAccelerationEvents}`
+  );
+
+  return {
+    totalAccelerationEvents,
+    averageAcceleration:
+      totalAccelerationEvents > 0
+        ? totalAcceleration / totalAccelerationEvents
+        : 0,
+    maxAcceleration,
+    minAcceleration,
+    harshAccelerationEvents,
+    harshAccelerationPercentage:
+      dataPointsWithAcceleration > 0
+        ? (harshAccelerationEvents / dataPointsWithAcceleration) * 100
+        : 0,
+    dataPointsWithAcceleration,
+  };
+};
+
+/**
  * Calculate the overall safety score and breakdown
  */
 export const calculateSafetyScore = async (speedingThreshold = 5) => {
   try {
-    const trips = await getAllTrips();
+    console.log(
+      "calculateSafetyScore: Starting calculation with threshold",
+      speedingThreshold
+    );
+
+    // Import getTripsFromLogs to get only real trips, not simulation
+    const { getTripsFromLogs } = await import("./loggingService");
+    const trips = await getTripsFromLogs("real"); // Only get real driving logs
+
+    console.log(
+      `calculateSafetyScore: Retrieved ${
+        trips ? trips.length : 0
+      } REAL trips (excluding simulation)`
+    );
+
+    if (trips && trips.length > 0) {
+      trips.forEach((trip, index) => {
+        console.log(
+          `Real Trip ${index + 1} (${trip.id || "unknown"}): ${
+            trip.logs ? trip.logs.length : 0
+          } logs, startTime: ${trip.startTime}, endTime: ${trip.endTime}`
+        );
+        if (trip.logs && trip.logs.length > 0) {
+          console.log(
+            `First real log sample:`,
+            JSON.stringify(trip.logs[0], null, 2)
+          );
+        }
+      });
+    }
 
     if (!trips || trips.length === 0) {
+      console.log(
+        "calculateSafetyScore: No real trips found, returning default scores"
+      );
       return {
         overallScore: 100,
         speedScore: 100,
+        accelerationScore: 100,
         lastUpdated: new Date().toISOString(),
         metrics: {
           totalDataPoints: 0,
@@ -143,40 +313,66 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
           maxSpeedDeviation: 0,
           speedingDuration: 0,
           speedingPercentage: 0,
+          // Acceleration metrics
+          totalAccelerationEvents: 0,
+          averageAcceleration: 0,
+          maxAcceleration: 0,
+          minAcceleration: 0,
+          harshAccelerationEvents: 0,
+          harshAccelerationPercentage: 0,
+          dataPointsWithAcceleration: 0,
         },
         breakdown: {
           speedControl: 100,
+          acceleration: 100,
           braking: 100, // Placeholder for future implementation
           steering: 100, // Placeholder for future implementation
           aggression: 100, // Placeholder for future implementation
         },
+        tripsAnalyzed: 0,
       };
     }
 
     // Calculate speed metrics
-    const metrics = calculateSpeedMetrics(trips, speedingThreshold);
-    const averageSpeedDeviation = metrics.averageSpeedDeviation; // Calculate speed control score using the new formula
-    const proportionSpeeding = metrics.speedingPercentage / 100; // Convert percentage to proportion
+    const speedMetrics = calculateSpeedMetrics(trips, speedingThreshold);
+    const averageSpeedDeviation = speedMetrics.averageSpeedDeviation;
+    const proportionSpeeding = speedMetrics.speedingPercentage / 100;
     const speedScore = calculateSpeedScore(
       averageSpeedDeviation,
       proportionSpeeding
     );
 
-    // For now, overall score is just the speed score
-    // In the future, this would incorporate other factors
-    const overallScore = speedScore; // Calculate breakdown scores (only speed control is implemented)
+    // Calculate acceleration metrics
+    const accelerationMetrics = calculateAccelerationMetrics(trips);
+    const accelerationScore = calculateAccelerationScore(
+      accelerationMetrics.averageAcceleration
+    );
+
+    // Calculate overall score (weighted average of implemented scores)
+    // TODO: Update weights when adding braking, steering, and aggression scoring
+    const overallScore = Math.round((speedScore + accelerationScore) / 2);
+
+    // Calculate breakdown scores
     const breakdown = {
       speedControl: speedScore,
+      acceleration: accelerationScore,
       braking: 85, // Placeholder - not implemented
       steering: 90, // Placeholder - not implemented
       aggression: 80, // Placeholder - not implemented
     };
 
+    // Combine all metrics
+    const combinedMetrics = {
+      ...speedMetrics,
+      ...accelerationMetrics,
+    };
+
     const scoreData = {
       overallScore,
       speedScore,
+      accelerationScore,
       lastUpdated: new Date().toISOString(),
-      metrics,
+      metrics: combinedMetrics,
       breakdown,
       tripsAnalyzed: trips.length,
     };
@@ -187,6 +383,7 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
     return {
       overallScore: 100,
       speedScore: 100,
+      accelerationScore: 100,
       lastUpdated: new Date().toISOString(),
       metrics: {
         totalDataPoints: 0,
@@ -195,13 +392,22 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
         maxSpeedDeviation: 0,
         speedingDuration: 0,
         speedingPercentage: 0,
+        totalAccelerationEvents: 0,
+        averageAcceleration: 0,
+        maxAcceleration: 0,
+        minAcceleration: 0,
+        harshAccelerationEvents: 0,
+        harshAccelerationPercentage: 0,
+        dataPointsWithAcceleration: 0,
       },
       breakdown: {
         speedControl: 100,
+        acceleration: 100,
         braking: 100,
         steering: 100,
         aggression: 100,
       },
+      tripsAnalyzed: 0,
     };
   }
 };
@@ -223,8 +429,14 @@ const getLatestTripTimestamp = async () => {
       return latestTripTimestampCache;
     }
 
-    console.log("getLatestTripTimestamp: Fetching fresh data");
-    const trips = await getAllTrips();
+    console.log(
+      "getLatestTripTimestamp: Fetching fresh data from real trips only"
+    );
+
+    // Import getTripsFromLogs to get only real trips
+    const { getTripsFromLogs } = await import("./loggingService");
+    const trips = await getTripsFromLogs("real"); // Only check real driving logs
+
     if (!trips || trips.length === 0) {
       latestTripTimestampCache = null;
       latestTripTimestampCacheTime = now;
@@ -358,6 +570,10 @@ export const getSafetyScore = async (
   forceUpdate = false
 ) => {
   try {
+    // TEMPORARY: Force update to bypass cache for debugging
+    forceUpdate = true;
+    console.log("FORCING SCORE UPDATE FOR DEBUGGING");
+
     // Check if we need to update
     const needsUpdate = forceUpdate || (await shouldUpdateScore());
 
@@ -381,6 +597,7 @@ export const getSafetyScore = async (
     return {
       overallScore: 100,
       speedScore: 100,
+      accelerationScore: 100,
       lastUpdated: new Date().toISOString(),
       metrics: {
         totalDataPoints: 0,
@@ -389,13 +606,22 @@ export const getSafetyScore = async (
         maxSpeedDeviation: 0,
         speedingDuration: 0,
         speedingPercentage: 0,
+        totalAccelerationEvents: 0,
+        averageAcceleration: 0,
+        maxAcceleration: 0,
+        minAcceleration: 0,
+        harshAccelerationEvents: 0,
+        harshAccelerationPercentage: 0,
+        dataPointsWithAcceleration: 0,
       },
       breakdown: {
         speedControl: 100,
+        acceleration: 100,
         braking: 100,
         steering: 100,
         aggression: 100,
       },
+      tripsAnalyzed: 0,
     };
   }
 };

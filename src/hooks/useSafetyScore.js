@@ -106,10 +106,12 @@ export const useSafetyScore = () => {
     scoreData,
     overallScore: loading ? null : scoreData?.overallScore ?? 100,
     speedScore: loading ? null : scoreData?.speedScore ?? 100,
+    accelerationScore: loading ? null : scoreData?.accelerationScore ?? 100,
     breakdown: loading
       ? null
       : scoreData?.breakdown || {
           speedControl: 100,
+          acceleration: 100,
           braking: 100,
           steering: 100,
           aggression: 100,
@@ -121,6 +123,13 @@ export const useSafetyScore = () => {
       maxSpeedDeviation: 0,
       speedingDuration: 0,
       speedingPercentage: 0,
+      totalAccelerationEvents: 0,
+      averageAcceleration: 0,
+      maxAcceleration: 0,
+      minAcceleration: 0,
+      harshAccelerationEvents: 0,
+      harshAccelerationPercentage: 0,
+      dataPointsWithAcceleration: 0,
     },
 
     // State
@@ -162,9 +171,9 @@ export const useSafetyScore = () => {
       if (score >= 85)
         return "Good driving! Minor improvements can make you even better.";
       if (score >= 80)
-        return "Decent driving. Focus on speed control for better scores.";
+        return "Decent driving. Focus on speed control and smooth acceleration.";
       if (score >= 75)
-        return "Room for improvement. Watch your speed more carefully.";
+        return "Room for improvement. Watch your speed and acceleration patterns.";
       if (score >= 70)
         return "Needs attention. Consider reviewing your driving habits.";
       if (score >= 60)

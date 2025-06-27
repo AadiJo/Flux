@@ -289,6 +289,7 @@ export const getLogs = async (logType) => {
 /**
  * Extracts trips from logs based on connection markers
  * A trip is defined as the period between a CONNECTED and DISCONNECTED marker
+ * If no connection markers are found, treats all logs as one continuous trip
  */
 export const getTripsFromLogs = async (logType) => {
   if (!loggers[logType]) {
@@ -298,9 +299,59 @@ export const getTripsFromLogs = async (logType) => {
 
   try {
     const logs = await getLogs(logType);
+    if (!logs || logs.length === 0) {
+      return [];
+    }
+
     const trips = [];
     let currentTrip = null;
+    let hasConnectionMarkers = false;
 
+    // First pass: check if we have connection markers
+    for (const log of logs) {
+      if (log.type === "CONNECTION_MARKER") {
+        hasConnectionMarkers = true;
+        break;
+      }
+    }
+
+    if (!hasConnectionMarkers) {
+      // No connection markers found, treat all logs as one trip
+      console.log(
+        `No connection markers found in ${logType} logs, treating as single trip`
+      );
+      const firstLog = logs[0];
+      const lastLog = logs[logs.length - 1];
+
+      // Filter out connection markers and get only driving data
+      const drivingLogs = logs.filter(
+        (log) => log.type !== "CONNECTION_MARKER"
+      );
+
+      if (drivingLogs.length > 0) {
+        const trip = {
+          id: 1,
+          startTime: firstLog.timestamp,
+          startMessage: "Auto-detected trip start",
+          endTime: lastLog.timestamp,
+          endMessage: "Auto-detected trip end",
+          roadName: "Mixed Routes",
+          logs: drivingLogs,
+        };
+
+        // Try to get a meaningful road name from the logs
+        const logWithStreet = drivingLogs.find((log) => log.streetName);
+        if (logWithStreet) {
+          trip.roadName = logWithStreet.streetName;
+        }
+
+        trips.push(trip);
+      }
+
+      return trips;
+    }
+
+    // Original logic for when connection markers exist
     for (const log of logs) {
       if (log.type === "CONNECTION_MARKER") {
         if (log.state === "CONNECTED") {

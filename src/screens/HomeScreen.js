@@ -63,6 +63,12 @@ export const HomeScreen = ({
             color: getScoreGradientColor(breakdown.speedControl),
           },
           {
+            title: "Acceleration",
+            score: breakdown.acceleration,
+            icon: "speedometer-medium",
+            color: getScoreGradientColor(breakdown.acceleration),
+          },
+          {
             title: "Braking",
             score: breakdown.braking,
             icon: "car-brake-hold",
@@ -73,12 +79,6 @@ export const HomeScreen = ({
             score: breakdown.steering,
             icon: "steering",
             color: getScoreGradientColor(breakdown.steering),
-          },
-          {
-            title: "Aggression",
-            score: breakdown.aggression,
-            icon: "car-emergency",
-            color: getScoreGradientColor(breakdown.aggression),
           },
         ];
 
@@ -251,7 +251,7 @@ export const HomeScreen = ({
               ? // Show loading placeholders
                 [1, 2, 3, 4].map((item, index) => (
                   <View
-                    key={index}
+                    key={`loading-${index}`}
                     style={[
                       styles.breakdownItem,
                       {
@@ -293,7 +293,7 @@ export const HomeScreen = ({
                 ))
               : scoreBreakdown.map((item, index) => (
                   <TouchableOpacity
-                    key={index}
+                    key={`breakdown-${index}`}
                     style={[
                       styles.breakdownItem,
                       {
