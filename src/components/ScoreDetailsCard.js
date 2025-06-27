@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { useSafetyScore } from "../hooks/useSafetyScore";
  * Component for displaying detailed safety score information in a carousel format
  * Can be used in modals or dedicated screens
  */
-export const ScoreDetailsCard = ({ onClose, style }) => {
+export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
   const { theme } = useTheme();
   const {
     overallScore,
@@ -29,7 +29,7 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
     formattedLastUpdated,
     forceRefresh,
   } = useSafetyScore();
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(initialPage);
   const [containerWidth, setContainerWidth] = useState(0);
   const scrollViewRef = useRef(null);
 
@@ -80,6 +80,22 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
     const { width } = event.nativeEvent.layout;
     setContainerWidth(width);
   };
+
+  // Effect to handle initial page navigation
+  useEffect(() => {
+    if (containerWidth > 0) {
+      setCurrentPage(initialPage);
+      scrollViewRef.current?.scrollTo({
+        x: initialPage * containerWidth,
+        animated: false,
+      });
+    }
+  }, [containerWidth, initialPage]);
+
+  // Additional effect to ensure page is set when initialPage changes
+  useEffect(() => {
+    setCurrentPage(initialPage);
+  }, [initialPage]);
 
   if (loading) {
     return (
@@ -515,20 +531,9 @@ export const ScoreDetailsCard = ({ onClose, style }) => {
             >
               <MaterialCommunityIcons
                 name={page.icon}
-                size={16}
+                size={20}
                 color={currentPage === index ? "white" : theme.textSecondary}
               />
-              <Text
-                style={[
-                  styles.tabText,
-                  {
-                    color:
-                      currentPage === index ? "white" : theme.textSecondary,
-                  },
-                ]}
-              >
-                {page.title}
-              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -606,12 +611,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     alignItems: "center",
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 4,
     borderRadius: 12,
     borderWidth: 1,
     marginHorizontal: 2,
-    minHeight: 60,
+    minHeight: 48,
     justifyContent: "center",
   },
   tabText: {

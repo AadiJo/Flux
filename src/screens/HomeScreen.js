@@ -47,9 +47,15 @@ export const HomeScreen = ({
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [showPidScan, setShowPidScan] = useState(false);
   const [showScoreDetails, setShowScoreDetails] = useState(false);
+  const [scoreDetailsInitialPage, setScoreDetailsInitialPage] = useState(0);
   const [recentTrips, setRecentTrips] = useState([]);
   const [badEventsCounts, setBadEventsCounts] = useState([]);
   const safetyScore = scoreLoading ? null : overallScore;
+
+  const handleScoreDetailsOpen = (pageIndex = 0) => {
+    setScoreDetailsInitialPage(pageIndex);
+    setShowScoreDetails(true);
+  };
 
   const scoreBreakdown =
     scoreLoading || !breakdown
@@ -60,24 +66,28 @@ export const HomeScreen = ({
             score: breakdown.speedControl,
             icon: "speedometer",
             color: getScoreGradientColor(breakdown.speedControl),
+            tabIndex: 1, // Speed Control tab
           },
           {
             title: "Acceleration",
             score: breakdown.acceleration,
             icon: "speedometer-medium",
             color: getScoreGradientColor(breakdown.acceleration),
+            tabIndex: 2, // Acceleration tab
           },
           {
             title: "Braking",
             score: breakdown.braking,
             icon: "car-brake-hold",
             color: getScoreGradientColor(breakdown.braking),
+            tabIndex: 3, // Braking tab
           },
           {
             title: "Steering",
             score: breakdown.steering,
             icon: "steering",
             color: getScoreGradientColor(breakdown.steering),
+            tabIndex: 4, // Safety Metrics tab (which includes steering)
           },
         ];
 
@@ -207,7 +217,7 @@ export const HomeScreen = ({
         </View>
 
         <View style={[styles.container, { backgroundColor: theme.background }]}>
-          <View
+          <TouchableOpacity
             style={[
               styles.scoreCard,
               {
@@ -215,6 +225,8 @@ export const HomeScreen = ({
                 borderColor: theme.border,
               },
             ]}
+            onPress={() => handleScoreDetailsOpen(0)}
+            activeOpacity={0.8}
           >
             <CircularProgress
               size={200}
@@ -239,7 +251,7 @@ export const HomeScreen = ({
                 ? "Loading your safety score..."
                 : getScoreMessage(safetyScore)}
             </Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.breakdownGrid}>
             {scoreLoading
@@ -295,7 +307,7 @@ export const HomeScreen = ({
                         borderColor: theme.border,
                       },
                     ]}
-                    onPress={() => setShowScoreDetails(true)}
+                    onPress={() => handleScoreDetailsOpen(item.tabIndex)}
                     activeOpacity={0.8}
                   >
                     <View
@@ -355,6 +367,7 @@ export const HomeScreen = ({
           <View style={styles.modalContainer}>
             <ScoreDetailsCard
               onClose={() => setShowScoreDetails(false)}
+              initialPage={scoreDetailsInitialPage}
               style={[
                 styles.modalContent,
                 { backgroundColor: theme.background },
@@ -366,7 +379,6 @@ export const HomeScreen = ({
     </SafeAreaView>
   );
 };
-
 
 const styles = StyleSheet.create({
   scrollView: {
