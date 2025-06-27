@@ -219,10 +219,10 @@ export const SettingsMenu = ({
             try {
               // Clear cached score data
               await clearCachedScore();
-              
+
               // Force refresh scores using the score manager
               await scoreManager.refreshScores(speedingThreshold, true);
-              
+
               Alert.alert(
                 "Refresh Complete",
                 "Safety scores have been recalculated from scratch. You should now see updated acceleration events and scores."
@@ -243,19 +243,23 @@ export const SettingsMenu = ({
   const handleDebugLogs = async () => {
     try {
       // Import the necessary functions
-      const { getTripsFromLogs, getAllTrips, getLogs } = await import("../services/loggingService");
-      const { calculateSafetyScore } = await import("../services/scoringService");
-      
+      const { getTripsFromLogs, getAllTrips, getLogs } = await import(
+        "../services/loggingService"
+      );
+      const { calculateSafetyScore } = await import(
+        "../services/scoringService"
+      );
+
       // Get real trips and logs
       const realTrips = await getTripsFromLogs("real");
       const allTrips = await getAllTrips();
       const realLogs = await getLogs("real");
-      
+
       console.log("=== COMPREHENSIVE DEBUG LOG INFO ===");
       console.log("Real logs count:", realLogs?.length || 0);
       console.log("Real trips count:", realTrips?.length || 0);
       console.log("All trips count:", allTrips?.length || 0);
-      
+
       // Analyze raw logs
       if (realLogs && realLogs.length > 0) {
         let totalWithAcceleration = 0;
@@ -263,8 +267,8 @@ export const SettingsMenu = ({
         let nullAcceleration = 0;
         let zeroAcceleration = 0;
         let negativeAcceleration = 0;
-        
-        realLogs.forEach(log => {
+
+        realLogs.forEach((log) => {
           if (log.acceleration !== null && log.acceleration !== undefined) {
             totalWithAcceleration++;
             if (log.acceleration > 0) positiveAcceleration++;
@@ -274,7 +278,7 @@ export const SettingsMenu = ({
             nullAcceleration++;
           }
         });
-        
+
         console.log("RAW LOGS ANALYSIS:");
         console.log(`- Total logs: ${realLogs.length}`);
         console.log(`- With acceleration data: ${totalWithAcceleration}`);
@@ -282,35 +286,41 @@ export const SettingsMenu = ({
         console.log(`- Zero acceleration: ${zeroAcceleration}`);
         console.log(`- Positive acceleration: ${positiveAcceleration}`);
         console.log(`- Negative acceleration: ${negativeAcceleration}`);
-        
+
         // Sample first 10 logs with acceleration data
         const accelerationSamples = realLogs
-          .filter(log => log.acceleration !== null && log.acceleration !== undefined)
+          .filter(
+            (log) => log.acceleration !== null && log.acceleration !== undefined
+          )
           .slice(0, 10)
           .map((log, i) => ({
             index: i,
             timestamp: log.timestamp,
             acceleration: log.acceleration,
-            speed: log.obd2Data?.speed
+            speed: log.obd2Data?.speed,
           }));
         console.log("First 10 acceleration samples:", accelerationSamples);
       }
-      
+
       // Analyze trips
       if (realTrips && realTrips.length > 0) {
         console.log("\nTRIPS ANALYSIS:");
         let totalTripLogs = 0;
         let totalAccelerationInTrips = 0;
-        
+
         realTrips.forEach((trip, index) => {
           const tripLogCount = trip.logs?.length || 0;
           totalTripLogs += tripLogCount;
-          
-          const tripAccelerationCount = trip.logs?.filter(log => 
-            log.acceleration !== null && log.acceleration !== undefined && log.acceleration > 0
-          ).length || 0;
+
+          const tripAccelerationCount =
+            trip.logs?.filter(
+              (log) =>
+                log.acceleration !== null &&
+                log.acceleration !== undefined &&
+                log.acceleration > 0
+            ).length || 0;
           totalAccelerationInTrips += tripAccelerationCount;
-          
+
           console.log(`Trip ${index + 1}:`, {
             id: trip.id,
             logsCount: tripLogCount,
@@ -318,15 +328,21 @@ export const SettingsMenu = ({
             startTime: trip.startTime,
             endTime: trip.endTime,
             roadName: trip.roadName,
-            hasAccelerationData: trip.logs?.some(log => log.acceleration !== null && log.acceleration !== undefined) || false
+            hasAccelerationData:
+              trip.logs?.some(
+                (log) =>
+                  log.acceleration !== null && log.acceleration !== undefined
+              ) || false,
           });
         });
-        
+
         console.log(`\nTRIPS SUMMARY:`);
         console.log(`- Total logs in trips: ${totalTripLogs}`);
-        console.log(`- Total positive acceleration events in trips: ${totalAccelerationInTrips}`);
+        console.log(
+          `- Total positive acceleration events in trips: ${totalAccelerationInTrips}`
+        );
       }
-      
+
       // Calculate score using the actual app logic
       try {
         console.log("\nCALCULATING SCORE WITH APP LOGIC:");
@@ -335,24 +351,31 @@ export const SettingsMenu = ({
           totalAccelerationEvents: scoreData.metrics?.totalAccelerationEvents,
           averageAcceleration: scoreData.metrics?.averageAcceleration,
           accelerationScore: scoreData.accelerationScore,
-          tripsAnalyzed: scoreData.tripsAnalyzed
+          tripsAnalyzed: scoreData.tripsAnalyzed,
         });
       } catch (error) {
         console.error("Error calculating score:", error);
       }
-      
+
       Alert.alert(
         "Debug Info",
-        `Raw logs: ${realLogs?.length || 0}\nTrips: ${realTrips?.length || 0}\nPositive acceleration in raw logs: ${realLogs?.filter(log => log.acceleration > 0).length || 0}\n\nCheck console for detailed analysis.`
+        `Raw logs: ${realLogs?.length || 0}\nTrips: ${
+          realTrips?.length || 0
+        }\nPositive acceleration in raw logs: ${
+          realLogs?.filter((log) => log.acceleration > 0).length || 0
+        }\n\nCheck console for detailed analysis.`
       );
     } catch (error) {
       console.error("Debug error:", error);
-      Alert.alert("Debug Error", "Failed to get debug info. Check console for details.");
+      Alert.alert(
+        "Debug Error",
+        "Failed to get debug info. Check console for details."
+      );
     }
   };
 
   if (!showingModal) return null;
-  
+
   return (
     <Modal
       visible={showingModal}
@@ -441,9 +464,9 @@ export const SettingsMenu = ({
                 </TouchableOpacity>
               </View>
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View key="sim-actions" style={styles.logActions}>
               <SettingButton
                 label="Import Sim"
@@ -458,7 +481,7 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
-            
+
             <View key="real-actions" style={styles.logActions}>
               <SettingButton
                 label="Import Real"
@@ -473,9 +496,9 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View key="tools-actions" style={styles.logActions}>
               <SettingButton
                 label="Migrate Logs"
@@ -490,9 +513,9 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <View key="debug-actions" style={styles.logActions}>
               <SettingButton
                 label="Score Debug"
@@ -512,15 +535,15 @@ export const SettingsMenu = ({
                 theme={theme}
               />
             </View>
-            
+
             <View style={styles.separator} />
-            
+
             <Text style={[styles.protocolText, { color: theme.textSecondary }]}>
               {protocolId
                 ? `OBD Protocol: ${protocolId}`
                 : "No OBD Protocol Configured"}
             </Text>
-            
+
             <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={[styles.closeButtonText, { color: theme.primary }]}>
                 Done
