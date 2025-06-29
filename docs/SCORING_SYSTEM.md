@@ -151,7 +151,6 @@ Where:
 
 - Braking score: Fixed at 85
 - Steering score: Fixed at 90
-- Aggression score: Fixed at 80
 
 These placeholder scores are displayed in the UI but are not calculated from actual driving data.
 
