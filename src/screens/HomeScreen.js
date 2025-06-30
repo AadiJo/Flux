@@ -363,7 +363,9 @@ export const HomeScreen = ({
               <View style={styles.recentTripsGroup}>
                 {recentTrips.map((trip, index) => (
                   <TouchableOpacity
-                    key={`recent-trip-${index}-${trip.id || trip.startTime || Date.now()}`}
+                    key={`recent-trip-${index}-${
+                      trip.id || trip.startTime || Date.now()
+                    }`}
                     style={[
                       styles.eventItem,
                       {
