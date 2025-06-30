@@ -257,7 +257,7 @@ export const HomeScreen = ({
             {scoreLoading
               ? [0, 1, 2, 3].map((_, index) => (
                   <View
-                    key={`loading-placeholder-${index}`}
+                    key={`loading-${index}`}
                     style={[
                       styles.breakdownItem,
                       {
@@ -297,9 +297,9 @@ export const HomeScreen = ({
                     </Text>
                   </View>
                 ))
-              : scoreBreakdown.map((item) => (
+              : scoreBreakdown.map((item, index) => (
                   <TouchableOpacity
-                    key={`breakdown-${item.title}`}
+                    key={`score-${index}-${item.title}`}
                     style={[
                       styles.breakdownItem,
                       {
@@ -339,7 +339,115 @@ export const HomeScreen = ({
                 ))}
           </View>
 
-          {/* recent trips and modal sections unchanged */}
+          {/* Recent Trips Section */}
+          {recentTrips.length > 0 && (
+            <View style={styles.eventsSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Recent Trips
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (setSelectedMode) setSelectedMode("maps");
+                    if (setHomeSelectedTrip) setHomeSelectedTrip(null); // Show trip list
+                  }}
+                >
+                  <Text
+                    style={[styles.viewAllButton, { color: theme.primary }]}
+                  >
+                    View All
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.recentTripsGroup}>
+                {recentTrips.map((trip, index) => (
+                  <TouchableOpacity
+                    key={`recent-trip-${index}-${trip.id || trip.startTime || Date.now()}`}
+                    style={[
+                      styles.eventItem,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => {
+                      if (setSelectedMode) setSelectedMode("maps");
+                      if (setHomeSelectedTrip) setHomeSelectedTrip(trip);
+                    }}
+                  >
+                    <View style={styles.eventLocation}>
+                      <MaterialCommunityIcons
+                        name="map-marker"
+                        size={20}
+                        color={theme.primary}
+                      />
+                      <View style={styles.eventDetails}>
+                        <Text
+                          style={[styles.locationText, { color: theme.text }]}
+                        >
+                          {trip.roadName || "Unknown Road"}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.durationText,
+                            { color: theme.textSecondary },
+                          ]}
+                        >
+                          {(() => {
+                            if (!trip.endTime) return "Ongoing";
+                            const start = new Date(trip.startTime);
+                            const end = new Date(trip.endTime);
+                            const diffMs = end - start;
+                            if (
+                              isNaN(start.getTime()) ||
+                              isNaN(end.getTime()) ||
+                              diffMs < 0
+                            )
+                              return "Unknown";
+                            const diffMins = Math.floor(diffMs / (1000 * 60));
+                            if (diffMins < 1)
+                              return `${Math.floor(diffMs / 1000)} sec`;
+                            if (diffMins < 60) return `${diffMins} min`;
+                            const hours = Math.floor(diffMins / 60);
+                            const mins = diffMins % 60;
+                            return `${hours}h ${mins}m`;
+                          })()}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.eventStatus}>
+                      <MaterialCommunityIcons
+                        name={
+                          badEventsCounts[index] > 0
+                            ? "alert-circle"
+                            : "check-circle"
+                        }
+                        size={16}
+                        color={
+                          badEventsCounts[index] > 0
+                            ? theme.error
+                            : theme.success
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.eventStatusText,
+                          { color: theme.textSecondary },
+                        ]}
+                      >
+                        {badEventsCounts[index] > 0
+                          ? `${badEventsCounts[index]} bad event${
+                              badEventsCounts[index] > 1 ? "s" : ""
+                            }`
+                          : "No issues"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </ScrollView>
 
