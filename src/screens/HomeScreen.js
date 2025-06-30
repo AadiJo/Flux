@@ -71,7 +71,7 @@ export const HomeScreen = ({
           {
             title: "Aggression",
             score: breakdown.acceleration,
-            icon: "speedometer-medium",
+            icon: "flash",
             color: getScoreGradientColor(breakdown.acceleration),
             tabIndex: 2, // Acceleration tab
           },
