@@ -69,7 +69,7 @@ export const HomeScreen = ({
             tabIndex: 1, // Speed Control tab
           },
           {
-            title: "Acceleration",
+            title: "Aggression",
             score: breakdown.acceleration,
             icon: "speedometer-medium",
             color: getScoreGradientColor(breakdown.acceleration),
