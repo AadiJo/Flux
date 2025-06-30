@@ -50,7 +50,7 @@ With these features, the finished product will empower parents to coach their te
 - ✅ Async location processing
 - ✅ Event pin markers
 - 🟨 Automatic OBD configuring
-- Steering Readinga from Phone
+- Steering readings from phone sensors
 - Driving advice?
 - Color coded pins for different events
 - Integration / Custom FW for further optimization
