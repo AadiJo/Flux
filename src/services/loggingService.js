@@ -1,5 +1,6 @@
 import * as FileSystem from "expo-file-system";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { DeviceMotion } from "expo-sensors";
 
 // Import scoreManager to trigger updates when trips complete
 let scoreManager = null;
@@ -10,6 +11,15 @@ try {
 }
 
 const LOGGING_ACTIVE_KEY = "logging_active_";
+
+// Store current device motion data
+let currentDeviceMotion = {
+  acceleration: { x: 0, y: 0, z: 0 },
+  rotation: { alpha: 0, beta: 0, gamma: 0 },
+};
+
+// Motion subscription reference
+let motionSubscription = null;
 
 const loggers = {
   sim: {
@@ -26,8 +36,50 @@ const loggers = {
   },
 };
 
+// Initialize motion sensor
+const initializeMotionSensor = () => {
+  if (motionSubscription) {
+    return; // Already initialized
+  }
+
+  try {
+    DeviceMotion.setUpdateInterval(100); // Update every 100ms
+    motionSubscription = DeviceMotion.addListener((data) => {
+      if (data && data.acceleration && data.rotation) {
+        currentDeviceMotion = {
+          acceleration: {
+            x: data.acceleration.x || 0,
+            y: data.acceleration.y || 0,
+            z: data.acceleration.z || 0,
+          },
+          rotation: {
+            alpha: data.rotation.alpha || 0,
+            beta: data.rotation.beta || 0,
+            gamma: data.rotation.gamma || 0,
+          },
+        };
+      }
+    });
+    console.log("Device motion sensor initialized for logging");
+  } catch (error) {
+    console.error("Failed to initialize device motion sensor:", error);
+  }
+};
+
+// Cleanup motion sensor
+const cleanupMotionSensor = () => {
+  if (motionSubscription) {
+    motionSubscription.remove();
+    motionSubscription = null;
+    console.log("Device motion sensor cleaned up");
+  }
+};
+
 // Initialize logging state from AsyncStorage
 export const initializeLogging = async () => {
+  // Initialize motion sensor
+  initializeMotionSensor();
+
   for (const logType in loggers) {
     try {
       const storedState = await AsyncStorage.getItem(
@@ -200,7 +252,19 @@ export const logData = async (logType, data) => {
   const logEntry = {
     timestamp: currentTimestamp.toISOString(),
     ...data,
-    acceleration: acceleration, // Add acceleration to log entry
+    acceleration: acceleration, // Add speed-based acceleration to log entry
+    deviceMotion: {
+      acceleration: {
+        x: Math.round(currentDeviceMotion.acceleration.x * 1000) / 1000,
+        y: Math.round(currentDeviceMotion.acceleration.y * 1000) / 1000,
+        z: Math.round(currentDeviceMotion.acceleration.z * 1000) / 1000,
+      },
+      rotation: {
+        alpha: Math.round(currentDeviceMotion.rotation.alpha * 1000) / 1000,
+        beta: Math.round(currentDeviceMotion.rotation.beta * 1000) / 1000,
+        gamma: Math.round(currentDeviceMotion.rotation.gamma * 1000) / 1000,
+      },
+    },
   };
 
   try {
@@ -426,4 +490,20 @@ export const getAllTrips = async () => {
     console.error("Failed to get all trips:", error);
     return [];
   }
+};
+
+/**
+ * Cleanup function to properly dispose of motion sensor and other resources
+ * Call this when the app is being closed or logging service is no longer needed
+ */
+export const cleanup = () => {
+  cleanupMotionSensor();
+};
+
+/**
+ * Get current device motion data
+ * Useful for debugging or displaying current motion state
+ */
+export const getCurrentDeviceMotion = () => {
+  return { ...currentDeviceMotion };
 };

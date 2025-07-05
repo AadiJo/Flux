@@ -199,6 +199,17 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
           {isSpeeding &&
             ` (${Math.abs(obd2Data.speed - speedLimit).toFixed(1)} mph over)`}
         </Text>
+        {entry.deviceMotion && (
+          <Text style={[styles.logText, { color: theme.textSecondary }]}>
+            Device Motion - Accel: x:
+            {entry.deviceMotion.acceleration?.x?.toFixed(3)}, y:
+            {entry.deviceMotion.acceleration?.y?.toFixed(3)}, z:
+            {entry.deviceMotion.acceleration?.z?.toFixed(3)} | Rotation: α:
+            {entry.deviceMotion.rotation?.alpha?.toFixed(3)}, β:
+            {entry.deviceMotion.rotation?.beta?.toFixed(3)}, γ:
+            {entry.deviceMotion.rotation?.gamma?.toFixed(3)}
+          </Text>
+        )}
       </View>
     );
   };
