@@ -100,9 +100,24 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.card }, style]}>
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-          Calculating safety score...
-        </Text>
+        {/* Header with close button */}
+        <View style={styles.header}>
+          {onClose && (
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <MaterialCommunityIcons
+                name="close"
+                size={24}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Calculating safety score...
+          </Text>
+        </View>
       </View>
     );
   }
@@ -110,15 +125,30 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
   if (error) {
     return (
       <View style={[styles.container, { backgroundColor: theme.card }, style]}>
-        <Text style={[styles.errorText, { color: theme.error }]}>
-          Error loading safety score: {error}
-        </Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: theme.primary }]}
-          onPress={forceRefresh}
-        >
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+        {/* Header with close button */}
+        <View style={styles.header}>
+          {onClose && (
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <MaterialCommunityIcons
+                name="close"
+                size={24}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <Text style={[styles.errorText, { color: theme.error }]}>
+            Error loading safety score: {error}
+          </Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: theme.primary }]}
+            onPress={forceRefresh}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -126,18 +156,33 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
   if (!hasData) {
     return (
       <View style={[styles.container, { backgroundColor: theme.card }, style]}>
-        <MaterialCommunityIcons
-          name="car-info"
-          size={48}
-          color={theme.textSecondary}
-          style={styles.noDataIcon}
-        />
-        <Text style={[styles.noDataTitle, { color: theme.text }]}>
-          No Driving Data Yet
-        </Text>
-        <Text style={[styles.noDataText, { color: theme.textSecondary }]}>
-          Start a trip to begin tracking your safety score
-        </Text>
+        {/* Header with close button */}
+        <View style={styles.header}>
+          {onClose && (
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <MaterialCommunityIcons
+                name="close"
+                size={24}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+          <MaterialCommunityIcons
+            name="car-info"
+            size={48}
+            color={theme.textSecondary}
+            style={styles.noDataIcon}
+          />
+          <Text style={[styles.noDataTitle, { color: theme.text }]}>
+            No Driving Data Yet
+          </Text>
+          <Text style={[styles.noDataText, { color: theme.textSecondary }]}>
+            Start a trip to begin tracking your safety score
+          </Text>
+        </View>
       </View>
     );
   }
