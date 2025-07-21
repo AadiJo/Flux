@@ -18,6 +18,7 @@ import { initializeLogging } from "../services/loggingService";
 import { getSpeedingPinsForTrip } from "../services/speedingService";
 import { getAccelerationPinsForTrip } from "../services/accelerationService";
 import { getBrakingPinsForTrip } from "../services/brakingService";
+import { getCombinedEventPinsForTrip } from "../services/combinedEventService";
 import { TripSelectionModal } from "../components/TripSelectionModal";
 
 export const MapsScreen = ({
@@ -37,6 +38,7 @@ export const MapsScreen = ({
   const [tripSpeedingPins, setTripSpeedingPins] = useState([]);
   const [tripAccelerationPins, setTripAccelerationPins] = useState([]);
   const [tripBrakingPins, setTripBrakingPins] = useState([]);
+  const [combinedEventPins, setCombinedEventPins] = useState([]);
 
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -45,22 +47,14 @@ export const MapsScreen = ({
   const loadTripData = async (trip) => {
     try {
       console.log("Loading trip data for:", trip.roadName);
-      // Load speeding pins
-      const speedingPins = await getSpeedingPinsForTrip(speedingThreshold, trip);
-      setTripSpeedingPins(speedingPins);
       
-      // Load acceleration pins (using 6 mph/s as threshold for harsh acceleration)
-      const accelerationPins = await getAccelerationPinsForTrip(6, trip);
-      setTripAccelerationPins(accelerationPins);
-      
-      // Load braking pins (using -8 mph/s as threshold for harsh braking, more tolerant)
-      const brakingPins = await getBrakingPinsForTrip(-8, trip);
-      setTripBrakingPins(brakingPins);
+      // Load combined event pins that merge nearby events
+      const combinedPins = await getCombinedEventPinsForTrip(trip, speedingThreshold, 6, -8);
+      setCombinedEventPins(combinedPins);
       
       // Set initial map region based on pins or logs
-      const allPins = [...speedingPins, ...accelerationPins, ...brakingPins];
-      if (allPins && allPins.length > 0) {
-        updateMapRegion(allPins[0].latitude, allPins[0].longitude);
+      if (combinedPins && combinedPins.length > 0) {
+        updateMapRegion(combinedPins[0].latitude, combinedPins[0].longitude);
       } else if (trip.logs && trip.logs.length > 0) {
         const firstLogWithLocation = trip.logs.find((log) => log.location);
         if (firstLogWithLocation) {
@@ -97,6 +91,7 @@ export const MapsScreen = ({
       setTripSpeedingPins([]);
       setTripAccelerationPins([]);
       setTripBrakingPins([]);
+      setCombinedEventPins([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeSelectedTrip]);
@@ -105,6 +100,7 @@ export const MapsScreen = ({
     setTripSpeedingPins([]);
     setTripAccelerationPins([]);
     setTripBrakingPins([]);
+    setCombinedEventPins([]);
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 150,
@@ -143,6 +139,77 @@ export const MapsScreen = ({
       updateMapRegion(latitude, longitude);
     }
   }, [appLocation, updateMapRegion, selectedTrip]);
+
+  // Helper function to render callout content for combined events
+  const renderCombinedCallout = (pin) => {
+    const { eventsByType, hasMultipleTypes } = pin;
+    
+    return (
+      <View style={[styles.calloutContainer, { backgroundColor: theme.card }]}>
+        {hasMultipleTypes ? (
+          <>
+            <Text style={[styles.speedingHeader, { color: theme.text }]}>
+              Multiple Events
+            </Text>
+            <Text style={[styles.eventCount, { color: theme.textSecondary, marginBottom: 8 }]}>
+              {pin.eventCount} event{pin.eventCount > 1 ? 's' : ''} at this location
+            </Text>
+          </>
+        ) : (
+          <Text style={[styles.speedingHeader, { color: theme.text }]}>
+            {pin.primaryEvent.type === 'speeding' ? 'Speeding Details' :
+             pin.primaryEvent.type === 'acceleration' ? 'Harsh Acceleration' :
+             'Harsh Braking'}
+          </Text>
+        )}
+        
+        {/* Speeding Events */}
+        {eventsByType.speeding.length > 0 && eventsByType.speeding.map((event, idx) => (
+          <View key={`speeding-${idx}`} style={styles.eventSection}>
+            {hasMultipleTypes && <Text style={[styles.eventType, { color: '#ff4444' }]}>🔴 Speeding</Text>}
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Speed: {Math.round(event.speed)} mph | Limit: {Math.round(event.speedLimit)} mph
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text, fontWeight: "bold" }]}>
+              Over by: {Math.round(event.speed - event.speedLimit)} mph
+            </Text>
+          </View>
+        ))}
+        
+        {/* Acceleration Events */}
+        {eventsByType.acceleration.length > 0 && eventsByType.acceleration.map((event, idx) => (
+          <View key={`acceleration-${idx}`} style={styles.eventSection}>
+            {hasMultipleTypes && <Text style={[styles.eventType, { color: '#ff8800' }]}>🟠 Acceleration</Text>}
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Acceleration: {event.acceleration.toFixed(1)} mph/s
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Speed: {Math.round(event.speed)} mph
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text, fontWeight: "bold" }]}>
+              {event.acceleration > 6 ? `${(event.acceleration - 6).toFixed(1)} mph/s over recommended` : 'Within safe range'}
+            </Text>
+          </View>
+        ))}
+        
+        {/* Braking Events */}
+        {eventsByType.braking.length > 0 && eventsByType.braking.map((event, idx) => (
+          <View key={`braking-${idx}`} style={styles.eventSection}>
+            {hasMultipleTypes && <Text style={[styles.eventType, { color: '#ffaa00' }]}>🟡 Braking</Text>}
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Braking: {event.braking.toFixed(1)} mph/s
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Speed: {Math.round(event.speed)} mph
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text, fontWeight: "bold" }]}>
+              {event.braking > 8 ? `${(event.braking - 8).toFixed(1)} mph/s over recommended` : 'Within safe range'}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   // Show trip selection modal
   if (showTripSelection) {
@@ -196,144 +263,21 @@ export const MapsScreen = ({
           showsMyLocationButton={!selectedTrip}
           showsCompass={false}
         >
-          {/* Show speeding pins for the selected trip */}
-          {tripSpeedingPins?.map((pin, index) => {
-            const speedDifference = Math.round(pin.speed - pin.speedLimit);
-
-            return (
-              <Marker
-                key={`speeding-${index}`}
-                coordinate={{
-                  latitude: pin.latitude,
-                  longitude: pin.longitude,
-                }}
-                pinColor="red"
-              >
-                <Callout tooltip>
-                  <View
-                    style={[
-                      styles.calloutContainer,
-                      { backgroundColor: theme.card },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.speedingHeader, { color: theme.text }]}
-                    >
-                      Speeding Details
-                    </Text>
-                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                      Speed: {Math.round(pin.speed)} mph | Limit:{" "}
-                      {Math.round(pin.speedLimit)} mph
-                    </Text>
-                    <Text
-                      style={[
-                        styles.speedingInfo,
-                        { color: theme.text, fontWeight: "bold" },
-                      ]}
-                    >
-                      {speedDifference >= 0
-                        ? `Over by: ${speedDifference} mph`
-                        : `Under by: ${Math.abs(speedDifference)} mph`}
-                    </Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
-
-          {/* Show acceleration pins for the selected trip */}
-          {tripAccelerationPins?.map((pin, index) => {
-            const accelerationOver = pin.acceleration - 6; // 6 mph/s is recommended max
-
-            return (
-              <Marker
-                key={`acceleration-${index}`}
-                coordinate={{
-                  latitude: pin.latitude,
-                  longitude: pin.longitude,
-                }}
-                pinColor="orange"
-              >
-                <Callout tooltip>
-                  <View
-                    style={[
-                      styles.calloutContainer,
-                      { backgroundColor: theme.card },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.speedingHeader, { color: theme.text }]}
-                    >
-                      Harsh Acceleration
-                    </Text>
-                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                      Acceleration: {pin.acceleration.toFixed(1)} mph/s
-                    </Text>
-                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                      Speed: {Math.round(pin.speed)} mph
-                    </Text>
-                    <Text
-                      style={[
-                        styles.speedingInfo,
-                        { color: theme.text, fontWeight: "bold" },
-                      ]}
-                    >
-                      {accelerationOver > 0
-                        ? `${accelerationOver.toFixed(1)} mph/s over recommended`
-                        : "Within safe range"}
-                    </Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
-
-          {/* Show braking pins for the selected trip */}
-          {tripBrakingPins?.map((pin, index) => {
-            const brakingOver = pin.braking - 8; // 8 mph/s is recommended max braking (more tolerant)
-
-            return (
-              <Marker
-                key={`braking-${index}`}
-                coordinate={{
-                  latitude: pin.latitude,
-                  longitude: pin.longitude,
-                }}
-                pinColor="yellow"
-              >
-                <Callout tooltip>
-                  <View
-                    style={[
-                      styles.calloutContainer,
-                      { backgroundColor: theme.card },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.speedingHeader, { color: theme.text }]}
-                    >
-                      Harsh Braking
-                    </Text>
-                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                      Braking: {pin.braking.toFixed(1)} mph/s
-                    </Text>
-                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
-                      Speed: {Math.round(pin.speed)} mph
-                    </Text>
-                    <Text
-                      style={[
-                        styles.speedingInfo,
-                        { color: theme.text, fontWeight: "bold" },
-                      ]}
-                    >
-                      {brakingOver > 0
-                        ? `${brakingOver.toFixed(1)} mph/s over recommended`
-                        : "Within safe range"}
-                    </Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
+          {/* Show combined event pins for the selected trip */}
+          {combinedEventPins?.map((pin, index) => (
+            <Marker
+              key={`combined-${index}`}
+              coordinate={{
+                latitude: pin.latitude,
+                longitude: pin.longitude,
+              }}
+              pinColor={pin.pinColor}
+            >
+              <Callout tooltip>
+                {renderCombinedCallout(pin)}
+              </Callout>
+            </Marker>
+          ))}
         </MapView>
 
         {/* Header with trip info and back button */}
@@ -442,6 +386,7 @@ const styles = StyleSheet.create({
   calloutContainer: {
     borderRadius: 12,
     padding: 12,
+    minWidth: 200,
   },
   speedingHeader: {
     fontSize: 14,
@@ -450,5 +395,21 @@ const styles = StyleSheet.create({
   },
   speedingInfo: {
     fontSize: 14,
+    marginBottom: 2,
+  },
+  eventCount: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  eventSection: {
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.2)',
+  },
+  eventType: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 3,
   },
 });
