@@ -480,10 +480,100 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
           </Text>
         </View>
 
-        <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-          Detailed braking analysis including harsh braking events, smoothness
-          metrics, and improvement suggestions will be displayed here.
-        </Text>
+        {hasData ? (
+          <>
+            <View style={styles.metricsSection}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Braking Performance
+              </Text>
+
+              <View style={styles.metricRow}>
+                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                  Average Braking:
+                </Text>
+                <Text style={[styles.metricValue, { color: theme.text }]}>
+                  {metrics?.averageBraking ? `${metrics.averageBraking.toFixed(1)} mph/s` : "No data"}
+                </Text>
+              </View>
+
+              <View style={styles.metricRow}>
+                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                  Max Braking:
+                </Text>
+                <Text style={[styles.metricValue, { color: theme.text }]}>
+                  {metrics?.maxBraking ? `${metrics.maxBraking.toFixed(1)} mph/s` : "No data"}
+                </Text>
+              </View>
+
+              <View style={styles.metricRow}>
+                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                  Harsh Braking Events:
+                </Text>
+                <Text style={[styles.metricValue, { color: theme.text }]}>
+                  {metrics?.harshBrakingEvents || 0}
+                </Text>
+              </View>
+
+              <View style={styles.metricRow}>
+                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                  Harsh Braking Rate:
+                </Text>
+                <Text style={[styles.metricValue, { color: theme.text }]}>
+                  {metrics?.harshBrakingPercentage ? `${metrics.harshBrakingPercentage.toFixed(1)}%` : "0%"}
+                </Text>
+              </View>
+
+              <View style={styles.metricRow}>
+                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
+                  Total Braking Events:
+                </Text>
+                <Text style={[styles.metricValue, { color: theme.text }]}>
+                  {metrics?.totalBrakingEvents || 0}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.metricsSection}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                Guidelines
+              </Text>
+              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                • Recommended max braking: 8 mph/s
+              </Text>
+              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                • Harsh braking threshold: 10 mph/s
+              </Text>
+              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                • Smooth braking improves safety and vehicle longevity
+              </Text>
+              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                • Anticipate stops to reduce harsh braking events
+              </Text>
+            </View>
+
+            {metrics?.harshBrakingEvents > 0 && (
+              <View style={styles.metricsSection}>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>
+                  Improvement Tips
+                </Text>
+                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                  • Increase following distance to allow gradual braking
+                </Text>
+                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                  • Watch traffic patterns ahead to anticipate stops
+                </Text>
+                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
+                  • Use engine braking on downhill sections when possible
+                </Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
+            Start driving to see detailed braking analysis including harsh braking events, 
+            smoothness metrics, and improvement suggestions.
+          </Text>
+        )}
       </ScrollView>
     </View>
   );

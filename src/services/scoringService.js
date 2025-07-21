@@ -77,6 +77,42 @@ const calculateAccelerationScore = (
 };
 
 /**
+ * Calculate braking score using piecewise linear function
+ * Based on acceleration formula but with more tolerance for braking events
+ * Uses absolute values of negative acceleration (braking deceleration)
+ *
+ * S(b) = {
+ *   1 + (b - blow_limit) / (bmin_ideal - blow_limit) × 99,     if b < bmin_ideal
+ *   100,                                                       if bmin_ideal ≤ b ≤ bmax_ideal
+ *   100 - (b - bmax_ideal) / (bhigh_limit - bmax_ideal) × 99,  if b > bmax_ideal
+ * }
+ *
+ * More tolerant parameters than acceleration: blow_limit = 0, bmin_ideal = 3, bmax_ideal = 8, bhigh_limit = 15
+ */
+const calculateBrakingScore = (
+  avgBraking,
+  bLowLimit = 0,
+  bMinIdeal = 3,
+  bMaxIdeal = 8,
+  bHighLimit = 15
+) => {
+  if (avgBraking < bMinIdeal) {
+    // Below ideal range
+    const score =
+      1 + ((avgBraking - bLowLimit) / (bMinIdeal - bLowLimit)) * 99;
+    return Math.max(1, Math.min(100, Math.round(score)));
+  } else if (avgBraking >= bMinIdeal && avgBraking <= bMaxIdeal) {
+    // Within ideal range
+    return 100;
+  } else {
+    // Above ideal range
+    const score =
+      100 - ((avgBraking - bMaxIdeal) / (bHighLimit - bMaxIdeal)) * 99;
+    return Math.max(1, Math.min(100, Math.round(score)));
+  }
+};
+
+/**
  * Calculate average speed deviation from trips
  * Only considers speeds that exceed the threshold (default 5 mph over limit)
  */
@@ -262,6 +298,95 @@ const calculateAccelerationMetrics = (trips) => {
 };
 
 /**
+ * Calculate braking metrics from trip data
+ * Uses the acceleration field stored in logs (negative values for braking scoring)
+ */
+const calculateBrakingMetrics = (trips) => {
+  let totalBrakingEvents = 0;
+  let totalBraking = 0; // Sum of absolute values of negative acceleration
+  let maxBraking = 0; // Max absolute braking deceleration
+  let minBraking = 0; // Min absolute braking deceleration
+  let harshBrakingEvents = 0;
+  let dataPointsWithBraking = 0;
+
+  console.log(`calculateBrakingMetrics: Processing ${trips.length} trips`);
+
+  for (const trip of trips) {
+    if (!trip.logs || trip.logs.length === 0) {
+      console.log(`Trip ${trip.id || "unknown"} has no logs for braking`);
+      continue;
+    }
+
+    console.log(
+      `Processing braking for trip ${trip.id || "unknown"} with ${
+        trip.logs.length
+      } logs`
+    );
+    let negativeBrakingCount = 0;
+
+    // Use the acceleration field already calculated and stored in logs (negative values)
+    for (const log of trip.logs) {
+      const acceleration = log.acceleration;
+
+      if (acceleration !== null && acceleration !== undefined && acceleration < 0) {
+        negativeBrakingCount++;
+        const brakingMagnitude = Math.abs(acceleration); // Convert to positive for calculations
+        
+        totalBraking += brakingMagnitude;
+        totalBrakingEvents++;
+        dataPointsWithBraking++;
+
+        maxBraking = Math.max(maxBraking, brakingMagnitude);
+        minBraking =
+          minBraking === 0
+            ? brakingMagnitude
+            : Math.min(minBraking, brakingMagnitude);
+
+        // Count harsh braking events (> 10 mph/s absolute as threshold, more tolerant than acceleration)
+        if (brakingMagnitude > 10) {
+          harshBrakingEvents++;
+          console.log(
+            `Harsh braking event: ${brakingMagnitude.toFixed(2)} mph/s`
+          );
+        }
+
+        // Log first few braking values for debugging
+        if (negativeBrakingCount <= 5) {
+          console.log(`Negative acceleration (braking) found: ${acceleration} mph/s (magnitude: ${brakingMagnitude})`);
+        }
+      }
+    }
+
+    console.log(`Trip ${trip.id || "unknown"} braking summary:`);
+    console.log(`  - Negative acceleration (braking) events: ${negativeBrakingCount}`);
+  }
+
+  console.log(
+    `calculateBrakingMetrics: Final results - totalBrakingEvents: ${totalBrakingEvents}, averageBraking: ${
+      totalBrakingEvents > 0
+        ? (totalBraking / totalBrakingEvents).toFixed(2)
+        : 0
+    } mph/s, harshEvents: ${harshBrakingEvents}`
+  );
+
+  return {
+    totalBrakingEvents,
+    averageBraking:
+      totalBrakingEvents > 0
+        ? totalBraking / totalBrakingEvents
+        : 0,
+    maxBraking,
+    minBraking,
+    harshBrakingEvents,
+    harshBrakingPercentage:
+      dataPointsWithBraking > 0
+        ? (harshBrakingEvents / dataPointsWithBraking) * 100
+        : 0,
+    dataPointsWithBraking,
+  };
+};
+
+/**
  * Calculate the overall safety score and breakdown
  */
 export const calculateSafetyScore = async (speedingThreshold = 5) => {
@@ -305,6 +430,7 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
         overallScore: 100,
         speedScore: 100,
         accelerationScore: 100,
+        brakingScore: 100,
         lastUpdated: new Date().toISOString(),
         metrics: {
           totalDataPoints: 0,
@@ -321,11 +447,19 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
           harshAccelerationEvents: 0,
           harshAccelerationPercentage: 0,
           dataPointsWithAcceleration: 0,
+          // Braking metrics
+          totalBrakingEvents: 0,
+          averageBraking: 0,
+          maxBraking: 0,
+          minBraking: 0,
+          harshBrakingEvents: 0,
+          harshBrakingPercentage: 0,
+          dataPointsWithBraking: 0,
         },
         breakdown: {
           speedControl: 100,
           acceleration: 100,
-          braking: 100, // Placeholder for future implementation
+          braking: 100,
           steering: 100, // Placeholder for future implementation
           aggression: 100, // Placeholder for future implementation
         },
@@ -348,15 +482,20 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
       accelerationMetrics.averageAcceleration
     );
 
+    // Calculate braking metrics
+    const brakingMetrics = calculateBrakingMetrics(trips);
+    const brakingScore = calculateBrakingScore(
+      brakingMetrics.averageBraking
+    );
+
     // Calculate overall score (weighted average of implemented scores)
-    // TODO: Update weights when adding braking, steering, and aggression scoring
-    const overallScore = Math.round((speedScore + accelerationScore) / 2);
+    const overallScore = Math.round((speedScore + accelerationScore + brakingScore) / 3);
 
     // Calculate breakdown scores
     const breakdown = {
       speedControl: speedScore,
       acceleration: accelerationScore,
-      braking: 85, // Placeholder - not implemented
+      braking: brakingScore,
       steering: 90, // Placeholder - not implemented
       aggression: 80, // Placeholder - not implemented
     };
@@ -365,12 +504,14 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
     const combinedMetrics = {
       ...speedMetrics,
       ...accelerationMetrics,
+      ...brakingMetrics,
     };
 
     const scoreData = {
       overallScore,
       speedScore,
       accelerationScore,
+      brakingScore,
       lastUpdated: new Date().toISOString(),
       metrics: combinedMetrics,
       breakdown,
@@ -384,6 +525,7 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
       overallScore: 100,
       speedScore: 100,
       accelerationScore: 100,
+      brakingScore: 100,
       lastUpdated: new Date().toISOString(),
       metrics: {
         totalDataPoints: 0,
@@ -399,6 +541,13 @@ export const calculateSafetyScore = async (speedingThreshold = 5) => {
         harshAccelerationEvents: 0,
         harshAccelerationPercentage: 0,
         dataPointsWithAcceleration: 0,
+        totalBrakingEvents: 0,
+        averageBraking: 0,
+        maxBraking: 0,
+        minBraking: 0,
+        harshBrakingEvents: 0,
+        harshBrakingPercentage: 0,
+        dataPointsWithBraking: 0,
       },
       breakdown: {
         speedControl: 100,

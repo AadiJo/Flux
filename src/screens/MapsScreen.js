@@ -17,6 +17,7 @@ import { useSettings } from "../contexts/SettingsContext";
 import { initializeLogging } from "../services/loggingService";
 import { getSpeedingPinsForTrip } from "../services/speedingService";
 import { getAccelerationPinsForTrip } from "../services/accelerationService";
+import { getBrakingPinsForTrip } from "../services/brakingService";
 import { TripSelectionModal } from "../components/TripSelectionModal";
 
 export const MapsScreen = ({
@@ -35,6 +36,7 @@ export const MapsScreen = ({
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [tripSpeedingPins, setTripSpeedingPins] = useState([]);
   const [tripAccelerationPins, setTripAccelerationPins] = useState([]);
+  const [tripBrakingPins, setTripBrakingPins] = useState([]);
 
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -51,8 +53,12 @@ export const MapsScreen = ({
       const accelerationPins = await getAccelerationPinsForTrip(6, trip);
       setTripAccelerationPins(accelerationPins);
       
+      // Load braking pins (using -8 mph/s as threshold for harsh braking, more tolerant)
+      const brakingPins = await getBrakingPinsForTrip(-8, trip);
+      setTripBrakingPins(brakingPins);
+      
       // Set initial map region based on pins or logs
-      const allPins = [...speedingPins, ...accelerationPins];
+      const allPins = [...speedingPins, ...accelerationPins, ...brakingPins];
       if (allPins && allPins.length > 0) {
         updateMapRegion(allPins[0].latitude, allPins[0].longitude);
       } else if (trip.logs && trip.logs.length > 0) {
@@ -90,6 +96,7 @@ export const MapsScreen = ({
       setSelectedTrip(null);
       setTripSpeedingPins([]);
       setTripAccelerationPins([]);
+      setTripBrakingPins([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeSelectedTrip]);
@@ -97,6 +104,7 @@ export const MapsScreen = ({
   const handleBackToTripSelection = () => {
     setTripSpeedingPins([]);
     setTripAccelerationPins([]);
+    setTripBrakingPins([]);
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 150,
@@ -272,6 +280,53 @@ export const MapsScreen = ({
                     >
                       {accelerationOver > 0
                         ? `${accelerationOver.toFixed(1)} mph/s over recommended`
+                        : "Within safe range"}
+                    </Text>
+                  </View>
+                </Callout>
+              </Marker>
+            );
+          })}
+
+          {/* Show braking pins for the selected trip */}
+          {tripBrakingPins?.map((pin, index) => {
+            const brakingOver = pin.braking - 8; // 8 mph/s is recommended max braking (more tolerant)
+
+            return (
+              <Marker
+                key={`braking-${index}`}
+                coordinate={{
+                  latitude: pin.latitude,
+                  longitude: pin.longitude,
+                }}
+                pinColor="yellow"
+              >
+                <Callout tooltip>
+                  <View
+                    style={[
+                      styles.calloutContainer,
+                      { backgroundColor: theme.card },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.speedingHeader, { color: theme.text }]}
+                    >
+                      Harsh Braking
+                    </Text>
+                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
+                      Braking: {pin.braking.toFixed(1)} mph/s
+                    </Text>
+                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
+                      Speed: {Math.round(pin.speed)} mph
+                    </Text>
+                    <Text
+                      style={[
+                        styles.speedingInfo,
+                        { color: theme.text, fontWeight: "bold" },
+                      ]}
+                    >
+                      {brakingOver > 0
+                        ? `${brakingOver.toFixed(1)} mph/s over recommended`
                         : "Within safe range"}
                     </Text>
                   </View>
