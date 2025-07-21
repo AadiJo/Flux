@@ -56,6 +56,7 @@ With these features, the finished product will empower parents to coach their te
 - Integration / Custom FW for further optimization
 - Individual score breakdowns
 - Styling cleanup
+- Third-party OBD support
 - ✅ Routes (trip grouping)
 - Bluetooth connection (instead of wifi)
 - Accounts / Data sharing
