@@ -16,6 +16,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { initializeLogging } from "../services/loggingService";
 import { getSpeedingPinsForTrip } from "../services/speedingService";
+import { getAccelerationPinsForTrip } from "../services/accelerationService";
 import { TripSelectionModal } from "../components/TripSelectionModal";
 
 export const MapsScreen = ({
@@ -33,18 +34,27 @@ export const MapsScreen = ({
   const [showTripSelection, setShowTripSelection] = useState(true);
   const [selectedTrip, setSelectedTrip] = useState(null);
   const [tripSpeedingPins, setTripSpeedingPins] = useState([]);
+  const [tripAccelerationPins, setTripAccelerationPins] = useState([]);
 
   // Animation values
-  const slideAnim = useRef(new Animated.Value(0)).current; // Load trip data when a trip is selected
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // Load trip data when a trip is selected
   const loadTripData = async (trip) => {
     try {
       console.log("Loading trip data for:", trip.roadName);
-      // Load pins first
-      const pins = await getSpeedingPinsForTrip(speedingThreshold, trip);
-      setTripSpeedingPins(pins);
+      // Load speeding pins
+      const speedingPins = await getSpeedingPinsForTrip(speedingThreshold, trip);
+      setTripSpeedingPins(speedingPins);
+      
+      // Load acceleration pins (using 6 mph/s as threshold for harsh acceleration)
+      const accelerationPins = await getAccelerationPinsForTrip(6, trip);
+      setTripAccelerationPins(accelerationPins);
+      
       // Set initial map region based on pins or logs
-      if (pins && pins.length > 0) {
-        updateMapRegion(pins[0].latitude, pins[0].longitude);
+      const allPins = [...speedingPins, ...accelerationPins];
+      if (allPins && allPins.length > 0) {
+        updateMapRegion(allPins[0].latitude, allPins[0].longitude);
       } else if (trip.logs && trip.logs.length > 0) {
         const firstLogWithLocation = trip.logs.find((log) => log.location);
         if (firstLogWithLocation) {
@@ -70,6 +80,7 @@ export const MapsScreen = ({
       console.error("Failed to load trip data:", error);
     }
   };
+
   useEffect(() => {
     if (homeSelectedTrip) {
       loadTripData(homeSelectedTrip);
@@ -78,12 +89,14 @@ export const MapsScreen = ({
       setShowTripSelection(true);
       setSelectedTrip(null);
       setTripSpeedingPins([]);
+      setTripAccelerationPins([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeSelectedTrip]);
 
   const handleBackToTripSelection = () => {
     setTripSpeedingPins([]);
+    setTripAccelerationPins([]);
     Animated.timing(slideAnim, {
       toValue: 0,
       duration: 150,
@@ -181,7 +194,7 @@ export const MapsScreen = ({
 
             return (
               <Marker
-                key={index}
+                key={`speeding-${index}`}
                 coordinate={{
                   latitude: pin.latitude,
                   longitude: pin.longitude,
@@ -213,6 +226,53 @@ export const MapsScreen = ({
                       {speedDifference >= 0
                         ? `Over by: ${speedDifference} mph`
                         : `Under by: ${Math.abs(speedDifference)} mph`}
+                    </Text>
+                  </View>
+                </Callout>
+              </Marker>
+            );
+          })}
+
+          {/* Show acceleration pins for the selected trip */}
+          {tripAccelerationPins?.map((pin, index) => {
+            const accelerationOver = pin.acceleration - 6; // 6 mph/s is recommended max
+
+            return (
+              <Marker
+                key={`acceleration-${index}`}
+                coordinate={{
+                  latitude: pin.latitude,
+                  longitude: pin.longitude,
+                }}
+                pinColor="orange"
+              >
+                <Callout tooltip>
+                  <View
+                    style={[
+                      styles.calloutContainer,
+                      { backgroundColor: theme.card },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.speedingHeader, { color: theme.text }]}
+                    >
+                      Harsh Acceleration
+                    </Text>
+                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
+                      Acceleration: {pin.acceleration.toFixed(1)} mph/s
+                    </Text>
+                    <Text style={[styles.speedingInfo, { color: theme.text }]}>
+                      Speed: {Math.round(pin.speed)} mph
+                    </Text>
+                    <Text
+                      style={[
+                        styles.speedingInfo,
+                        { color: theme.text, fontWeight: "bold" },
+                      ]}
+                    >
+                      {accelerationOver > 0
+                        ? `${accelerationOver.toFixed(1)} mph/s over recommended`
+                        : "Within safe range"}
                     </Text>
                   </View>
                 </Callout>
