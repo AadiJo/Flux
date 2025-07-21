@@ -480,100 +480,107 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
           </Text>
         </View>
 
-        {hasData ? (
-          <>
-            <View style={styles.metricsSection}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Braking Performance
-              </Text>
-
-              <View style={styles.metricRow}>
-                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-                  Average Braking:
-                </Text>
-                <Text style={[styles.metricValue, { color: theme.text }]}>
-                  {metrics?.averageBraking ? `${metrics.averageBraking.toFixed(1)} mph/s` : "No data"}
-                </Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-                  Max Braking:
-                </Text>
-                <Text style={[styles.metricValue, { color: theme.text }]}>
-                  {metrics?.maxBraking ? `${metrics.maxBraking.toFixed(1)} mph/s` : "No data"}
-                </Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-                  Harsh Braking Events:
-                </Text>
-                <Text style={[styles.metricValue, { color: theme.text }]}>
-                  {metrics?.harshBrakingEvents || 0}
-                </Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-                  Harsh Braking Rate:
-                </Text>
-                <Text style={[styles.metricValue, { color: theme.text }]}>
-                  {metrics?.harshBrakingPercentage ? `${metrics.harshBrakingPercentage.toFixed(1)}%` : "0%"}
-                </Text>
-              </View>
-
-              <View style={styles.metricRow}>
-                <Text style={[styles.metricLabel, { color: theme.textSecondary }]}>
-                  Total Braking Events:
-                </Text>
-                <Text style={[styles.metricValue, { color: theme.text }]}>
-                  {metrics?.totalBrakingEvents || 0}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.metricsSection}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                Guidelines
-              </Text>
-              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                • Recommended max braking: 8 mph/s
-              </Text>
-              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                • Harsh braking threshold: 10 mph/s
-              </Text>
-              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                • Smooth braking improves safety and vehicle longevity
-              </Text>
-              <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                • Anticipate stops to reduce harsh braking events
-              </Text>
-            </View>
-
-            {metrics?.harshBrakingEvents > 0 && (
-              <View style={styles.metricsSection}>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  Improvement Tips
-                </Text>
-                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                  • Increase following distance to allow gradual braking
-                </Text>
-                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                  • Watch traffic patterns ahead to anticipate stops
-                </Text>
-                <Text style={[styles.guidelineText, { color: theme.textSecondary }]}>
-                  • Use engine braking on downhill sections when possible
-                </Text>
-              </View>
-            )}
-          </>
-        ) : (
-          <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-            Start driving to see detailed braking analysis including harsh braking events, 
-            smoothness metrics, and improvement suggestions.
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Braking Statistics
           </Text>
-        )}
+
+          <View style={styles.metricsGrid}>
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.totalBrakingEvents || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Braking Events
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.averageBraking || 0).toFixed(1)} mph/s`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Average Braking
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.maxBraking || 0).toFixed(1)} mph/s`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Max Braking
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.harshBrakingEvents || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Harsh Events
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {`${(metrics?.harshBrakingPercentage || 0).toFixed(1)}%`}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Harsh Event Rate
+              </Text>
+            </View>
+
+            <View style={styles.metricItem}>
+              <Text style={[styles.metricValue, { color: theme.primary }]}>
+                {metrics?.dataPointsWithBraking || 0}
+              </Text>
+              <Text
+                style={[styles.metricLabel, { color: theme.textSecondary }]}
+              >
+                Data Points
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Score Formula
+          </Text>
+          <Text
+            style={[styles.placeholderText, { color: theme.textSecondary }]}
+          >
+            Braking scores are calculated using a piecewise linear function
+            based on your average braking patterns (with more tolerance than acceleration):
+            {"\n\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>Ideal Range (3-8 mph/s):</Text>{" "}
+            100 points
+            {"\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>
+              Too Gentle (&lt;3 mph/s):
+            </Text>{" "}
+            Linear penalty down to 1 point
+            {"\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>
+              Too Harsh (&gt;8 mph/s):
+            </Text>{" "}
+            Linear penalty down to 1 point
+            {"\n\n"}
+            Your current average:{" "}
+            {(metrics?.averageBraking || 0).toFixed(1)} mph/s
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
