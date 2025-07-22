@@ -61,6 +61,7 @@ export const getCombinedEventPinsForTrip = async (
   ];
 
   // Group events by proximity (within 100 feet)
+  // BUT prevent acceleration and braking events from being merged together
   const groups = [];
   const mergeDistance = 100; // feet
 
@@ -75,9 +76,23 @@ export const getCombinedEventPinsForTrip = async (
       });
 
       if (isCloseToGroup) {
-        group.events.push(event);
-        foundGroup = true;
-        break;
+        const groupHasAcceleration = group.events.some(e => e.type === 'acceleration');
+        const groupHasBraking = group.events.some(e => e.type === 'braking');
+        const eventIsAcceleration = event.type === 'acceleration';
+        const eventIsBraking = event.type === 'braking';
+        
+        // Prevent merging if:
+        // - Group has acceleration and current event is braking, OR
+        // - Group has braking and current event is acceleration
+        const wouldCreateIncompatibleMerge = 
+          (groupHasAcceleration && eventIsBraking) || 
+          (groupHasBraking && eventIsAcceleration);
+        
+        if (!wouldCreateIncompatibleMerge) {
+          group.events.push(event);
+          foundGroup = true;
+          break;
+        }
       }
     }
 
@@ -140,6 +155,6 @@ export const getCombinedEventPinsForTrip = async (
     };
   });
 
-  console.log(`Returning ${combinedPins.length} combined pins (${combinedPins.filter(p => p.hasMultipleTypes).length} with multiple event types)`);
+  // console.log(`Returning ${combinedPins.length} combined pins (${combinedPins.filter(p => p.hasMultipleTypes).length} with multiple event types)`);
   return combinedPins;
 };

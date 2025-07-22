@@ -136,6 +136,6 @@ export const getAccelerationPinsForTrip = async (accelerationThreshold, trip) =>
       current.acceleration > max.acceleration ? current : max
     );
   });
-  console.log("Returning acceleration pins for trip:", representativePins.length);
+  // console.log("Returning acceleration pins for trip:", representativePins.length);
   return representativePins;
 };

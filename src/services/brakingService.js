@@ -141,6 +141,6 @@ export const getBrakingPinsForTrip = async (brakingThreshold, trip) => {
     );
   });
   
-  console.log("Returning braking pins for trip:", representativePins.length);
+  // console.log("Returning braking pins for trip:", representativePins.length);
   return representativePins;
 };
