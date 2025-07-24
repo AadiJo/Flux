@@ -20,7 +20,13 @@
         "backgroundColor": "#00202ds"
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Flux needs access to track your speed and location."
+        "NSLocationWhenInUseUsageDescription": "Flux needs access to track your speed and location.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Flux needs location access to continue monitoring your driving when in background.",
+        "UIBackgroundModes": [
+          "location",
+          "background-fetch",
+          "background-processing"
+        ]
       }
     },
     "android": {
@@ -31,7 +37,10 @@
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_WIFI_STATE"
+        "ACCESS_WIFI_STATE",
+        "FOREGROUND_SERVICE",
+        "WAKE_LOCK",
+        "ACCESS_BACKGROUND_LOCATION"
       ],
       "edgeToEdgeEnabled": true,
       "splash": {

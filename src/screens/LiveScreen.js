@@ -28,6 +28,11 @@ import {
 import { getSpeedLimit } from "../services/mapService";
 import { fetchWicanData } from "../services/wicanService";
 import LogViewerModal from "../components/LogViewerModal";
+import { 
+  startBackgroundMonitoring, 
+  stopBackgroundMonitoring, 
+  isBackgroundMonitoringActive 
+} from "../services/backgroundService";
 
 const screenWidth = Dimensions.get("window").width;
 const LAST_ALERT_KEY = "last_speeding_alert_timestamp";
@@ -85,6 +90,7 @@ export const LiveScreen = ({
   const [isLogging, setIsLogging] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [speedLimit, setSpeedLimit] = useState(null);
+  const [isBackgroundActive, setIsBackgroundActive] = useState(false);
   const dataInterval = useRef(null);
   const lastFetchFailed = useRef(false);
   const bannerShown = useRef(false);
@@ -94,6 +100,15 @@ export const LiveScreen = ({
 
   const isConnected = isWicanSimulated || isWicanConnected;
   const isDataAvailable = isApiConnected || isWicanSimulated;
+
+  // Check background monitoring status on mount
+  useEffect(() => {
+    const checkBackgroundStatus = async () => {
+      const active = await isBackgroundMonitoringActive();
+      setIsBackgroundActive(active);
+    };
+    checkBackgroundStatus();
+  }, []);
 
   useEffect(() => {
     if (isDataAvailable && !bannerShown.current) {
@@ -357,6 +372,45 @@ export const LiveScreen = ({
     }
   };
 
+  const handleBackgroundToggle = async () => {
+    try {
+      if (isBackgroundActive) {
+        const result = await stopBackgroundMonitoring();
+        if (result.success) {
+          setIsBackgroundActive(false);
+          Alert.alert(
+            'Background Monitoring Disabled',
+            'Flux will only collect data when the app is active.'
+          );
+        }
+      } else {
+        Alert.alert(
+          'Enable Background Monitoring',
+          'Flux will continue monitoring your driving when you switch to other apps. This may affect battery life.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Enable',
+              onPress: async () => {
+                const result = await startBackgroundMonitoring();
+                if (result.success) {
+                  setIsBackgroundActive(true);
+                  Alert.alert(
+                    'Background Monitoring Enabled',
+                    'Flux will now continue collecting OBD data when you switch to other apps.'
+                  );
+                }
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling background monitoring:', error);
+      Alert.alert('Error', 'Failed to toggle background monitoring.');
+    }
+  };
+
   const handleClearLogs = () => {
     Alert.alert(
       "Clear Logs",
@@ -440,6 +494,16 @@ export const LiveScreen = ({
               color={theme.error}
             />
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={handleBackgroundToggle}
+          >
+            <MaterialCommunityIcons
+              name={isBackgroundActive ? "cloud-check" : "cloud-off-outline"}
+              size={24}
+              color={isBackgroundActive ? theme.success : theme.textSecondary}
+            />
+          </TouchableOpacity>
           {isDataAvailable && (
             <>
               <TouchableOpacity
@@ -465,17 +529,32 @@ export const LiveScreen = ({
             </>
           )}
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center" }}>
-          <Text style={{ color: theme.text, marginRight: 8 }}>
-            Simulate WiCAN
-          </Text>
-          <Switch
-            trackColor={{ false: "#767577", true: theme.primary }}
-            thumbColor={isWicanSimulated ? theme.card : "#f4f3f4"}
-            ios_backgroundColor="#3e3e3e"
-            onValueChange={handleSimulationToggle}
-            value={isWicanSimulated}
-          />
+        <View style={{ flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <Text style={{ color: theme.text, marginRight: 8 }}>
+              Simulate WiCAN
+            </Text>
+            <Switch
+              trackColor={{ false: "#767577", true: theme.primary }}
+              thumbColor={isWicanSimulated ? theme.card : "#f4f3f4"}
+              ios_backgroundColor="#3e3e3e"
+              onValueChange={handleSimulationToggle}
+              value={isWicanSimulated}
+            />
+          </View>
+          {isBackgroundActive && (
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="cloud-check"
+                size={16}
+                color={theme.success}
+                style={{ marginRight: 4 }}
+              />
+              <Text style={{ color: theme.success, fontSize: 12 }}>
+                Background Active
+              </Text>
+            </View>
+          )}
         </View>
       </View>
 

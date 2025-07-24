@@ -21,6 +21,7 @@ import { getStoredProtocol } from "../services/protocolDetectionService";
 import { migrateAllLogs } from "../utils/logMigration";
 import { scoreManager } from "../utils/scoreManager";
 import { clearCachedScore } from "../services/scoringService";
+import { BackgroundMonitoringCard } from "./BackgroundMonitoringCard";
 
 const SettingButton = ({ label, icon, onPress, theme }) => (
   <TouchableOpacity
@@ -464,6 +465,8 @@ export const SettingsMenu = ({
                 </TouchableOpacity>
               </View>
             </View>
+
+            <BackgroundMonitoringCard />
 
             <View style={styles.separator} />
 

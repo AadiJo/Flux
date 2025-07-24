@@ -49,8 +49,10 @@ With these features, the finished product will empower parents to coach their te
 
 - ✅ Async location processing
 - ✅ Event pin markers
+- ✅ Background monitoring
 - 🟨 Automatic OBD configuring
 - 🟨 Steering readings from phone sensors
+- Explicit background service
 - Driving advice?
 - ✅ Color coded pins for different events
 - Integration / Custom FW for further optimization

@@ -15,6 +15,7 @@ import { SettingsProvider, useSettings } from "./contexts/SettingsContext";
 import * as Location from "expo-location";
 import { LocationProvider } from "./contexts/LocationContext";
 import { initializeLogging } from "./services/loggingService";
+import { initializeBackgroundService } from "./services/backgroundService";
 import { getSpeedingPins } from "./services/speedingService";
 import { BlurView } from "expo-blur";
 
@@ -61,6 +62,7 @@ const AppContent = () => {
     async function prepare() {
       try {
         await initializeLogging();
+        await initializeBackgroundService();
         await updateSpeedingPinsFromLogs();
         // Get location permission and initial location while loading
         const { status } = await Location.requestForegroundPermissionsAsync();
