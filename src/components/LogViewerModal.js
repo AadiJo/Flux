@@ -146,6 +146,63 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
       );
     }
 
+    // Handle unsafe turning events
+    if (entry.type === "UNSAFE_TURNING") {
+      const severityColor = entry.severity === "HIGH" ? "#FF0000" : "#FF8C00";
+      const backgroundColor = entry.severity === "HIGH" 
+        ? "rgba(255, 0, 0, 0.3)" 
+        : "rgba(255, 140, 0, 0.3)";
+
+      return (
+        <View
+          key={index}
+          style={[
+            styles.logEntryContainer,
+            styles.connectionMarkerContainer,
+            { backgroundColor, borderColor: severityColor },
+          ]}
+        >
+          <View style={styles.connectionMarkerHeader}>
+            <Ionicons
+              name="warning"
+              size={20}
+              color={severityColor}
+            />
+            <Text
+              style={[
+                styles.connectionMarkerTitle,
+                { color: severityColor },
+              ]}
+            >
+              🚨 UNSAFE TURNING EVENT - {entry.severity} SEVERITY
+            </Text>
+          </View>
+          <Text style={[styles.logTimestamp, { color: theme.text }]}>
+            {new Date(entry.timestamp).toLocaleString()}
+          </Text>
+          <Text
+            style={[
+              styles.connectionMarkerMessage,
+              { color: theme.textSecondary },
+            ]}
+          >
+            {entry.message}
+          </Text>
+          <Text style={[styles.logText, { color: theme.textSecondary }]}>
+            G-Force Values: X: {entry.gForce.x}g, Y: {entry.gForce.y}g, Z: {entry.gForce.z}g
+          </Text>
+          <Text style={[styles.logText, { color: severityColor, fontWeight: "bold" }]}>
+            Maximum G-Force: {entry.gForce.max}g (Threshold: {entry.threshold}g)
+          </Text>
+          {entry.streetName && (
+            <Text style={[styles.logText, { color: theme.textSecondary }]}>
+              Location: {entry.streetName}
+            </Text>
+          )}
+        </View>
+      );
+    }
+
     // Handle regular data entries
     const {
       timestamp,
@@ -154,23 +211,61 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
       streetName,
       speedLimit,
       acceleration,
+      turningAnalysis,
     } = entry;
     const isSpeeding =
       obd2Data?.speed &&
       speedLimit &&
       Math.abs(obd2Data.speed - speedLimit) > speedingThreshold;
 
+    // Determine if this entry has unsafe turning
+    const hasUnsafeTurning = turningAnalysis?.isUnsafeTurning;
+    const turningSeverity = turningAnalysis?.severity;
+
+    // Set background color based on safety status
+    let backgroundColor = "transparent";
+    if (hasUnsafeTurning && turningSeverity === "HIGH") {
+      backgroundColor = "rgba(255, 0, 0, 0.25)"; // Red for high severity
+    } else if (hasUnsafeTurning && turningSeverity === "MEDIUM") {
+      backgroundColor = "rgba(255, 165, 0, 0.25)"; // Orange for medium severity
+    } else if (isSpeeding) {
+      backgroundColor = "rgba(255, 0, 0, 0.15)"; // Light red for speeding
+    }
+
     return (
       <View
         key={index}
         style={[
           styles.logEntryContainer,
-          isSpeeding && { backgroundColor: "rgba(255, 0, 0, 0.15)" },
+          { backgroundColor },
         ]}
       >
         <Text style={[styles.logTimestamp, { color: theme.text }]}>
           {new Date(timestamp).toLocaleString()}
         </Text>
+        
+        {/* Unsafe Turning Alert */}
+        {hasUnsafeTurning && (
+          <View style={styles.unsafeTurningAlert}>
+            <Ionicons
+              name="warning"
+              size={16}
+              color={turningSeverity === "HIGH" ? "#FF0000" : "#FF8C00"}
+            />
+            <Text
+              style={[
+                styles.unsafeTurningText,
+                {
+                  color: turningSeverity === "HIGH" ? "#FF0000" : "#FF8C00",
+                  fontWeight: "bold",
+                },
+              ]}
+            >
+              ⚠️ UNSAFE TURNING DETECTED - {turningSeverity} SEVERITY
+            </Text>
+          </View>
+        )}
+        
         <Text style={[styles.logText, { color: theme.textSecondary }]}>
           Speed: {obd2Data?.speed?.toFixed(2)} mph, RPM:{" "}
           {obd2Data?.rpm?.toFixed(2)}, Throttle:{" "}
@@ -199,15 +294,41 @@ const LogViewerModal = ({ visible, onClose, logType }) => {
           {isSpeeding &&
             ` (${Math.abs(obd2Data.speed - speedLimit).toFixed(1)} mph over)`}
         </Text>
+        
+        {/* Enhanced Device Motion Display with G-Force Analysis */}
         {entry.deviceMotion && (
-          <Text style={[styles.logText, { color: theme.textSecondary }]}>
-            Device Motion - Accel: x:
-            {entry.deviceMotion.acceleration?.x?.toFixed(3)}, y:
-            {entry.deviceMotion.acceleration?.y?.toFixed(3)}, z:
-            {entry.deviceMotion.acceleration?.z?.toFixed(3)} | Rotation: α:
-            {entry.deviceMotion.rotation?.alpha?.toFixed(3)}, β:
-            {entry.deviceMotion.rotation?.beta?.toFixed(3)}, γ:
-            {entry.deviceMotion.rotation?.gamma?.toFixed(3)}
+          <>
+            <Text style={[styles.logText, { color: theme.textSecondary }]}>
+              Device Motion - Accel: x:
+              {entry.deviceMotion.acceleration?.x?.toFixed(3)}, y:
+              {entry.deviceMotion.acceleration?.y?.toFixed(3)}, z:
+              {entry.deviceMotion.acceleration?.z?.toFixed(3)} | Max G-Force: 
+              {entry.deviceMotion.maxGForce?.toFixed(3)}g
+            </Text>
+            <Text style={[styles.logText, { color: theme.textSecondary }]}>
+              Rotation: α:{entry.deviceMotion.rotation?.alpha?.toFixed(3)}, β:
+              {entry.deviceMotion.rotation?.beta?.toFixed(3)}, γ:
+              {entry.deviceMotion.rotation?.gamma?.toFixed(3)}
+            </Text>
+          </>
+        )}
+        
+        {/* Turning Analysis Display */}
+        {turningAnalysis && (
+          <Text 
+            style={[
+              styles.logText, 
+              { 
+                color: hasUnsafeTurning 
+                  ? (turningSeverity === "HIGH" ? "#FF0000" : "#FF8C00")
+                  : theme.textSecondary 
+              }
+            ]}
+          >
+            Turning Safety: {turningAnalysis.severity} 
+            {hasUnsafeTurning && 
+              ` (${turningAnalysis.exceedsThreshold.toFixed(3)}g over ${turningAnalysis.threshold}g threshold)`
+            }
           </Text>
         )}
       </View>
@@ -306,6 +427,20 @@ const styles = StyleSheet.create({
   },
   logText: {
     fontSize: 14,
+  },
+  unsafeTurningAlert: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.9)",
+  },
+  unsafeTurningText: {
+    fontSize: 12,
+    marginLeft: 6,
+    fontWeight: "bold",
   },
   emptyText: {
     textAlign: "center",

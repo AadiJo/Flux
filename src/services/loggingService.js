@@ -21,6 +21,9 @@ let currentDeviceMotion = {
 // Motion subscription reference
 let motionSubscription = null;
 
+// G-force threshold for unsafe turning detection (in g units)
+const UNSAFE_TURNING_THRESHOLD = 0.85;
+
 const loggers = {
   sim: {
     uri: FileSystem.documentDirectory + "sim_session_logs.jsonl",
@@ -58,6 +61,18 @@ const initializeMotionSensor = () => {
             gamma: data.rotation.gamma || 0,
           },
         };
+
+        // Check for unsafe turning in both log types if they are active
+        if (loggers.real.isLoggingActive) {
+          checkAndLogUnsafeTurning("real", currentDeviceMotion.acceleration).catch(
+            (error) => console.error("Error checking unsafe turning for real logs:", error)
+          );
+        }
+        if (loggers.sim.isLoggingActive) {
+          checkAndLogUnsafeTurning("sim", currentDeviceMotion.acceleration).catch(
+            (error) => console.error("Error checking unsafe turning for sim logs:", error)
+          );
+        }
       }
     });
     console.log("Device motion sensor initialized for logging");
@@ -146,6 +161,61 @@ const logConnectionMarker = async (logType, state, additionalData = {}) => {
     console.log(`Connection marker logged for ${logType}: ${state}`);
   } catch (error) {
     console.error(`Failed to write connection marker for ${logType}:`, error);
+  }
+};
+
+// Function to check for unsafe turning and log the event
+const checkAndLogUnsafeTurning = async (logType, acceleration, additionalData = {}) => {
+  if (!loggers[logType] || !loggers[logType].isLoggingActive) {
+    return;
+  }
+
+  // Check if any axis exceeds the threshold
+  const maxGForce = Math.max(
+    Math.abs(acceleration.x),
+    Math.abs(acceleration.y),
+    Math.abs(acceleration.z)
+  );
+
+  if (maxGForce > UNSAFE_TURNING_THRESHOLD) {
+    const unsafeTurningEntry = {
+      timestamp: new Date().toISOString(),
+      type: "UNSAFE_TURNING",
+      gForce: {
+        x: Math.round(acceleration.x * 1000) / 1000,
+        y: Math.round(acceleration.y * 1000) / 1000,
+        z: Math.round(acceleration.z * 1000) / 1000,
+        max: Math.round(maxGForce * 1000) / 1000,
+      },
+      threshold: UNSAFE_TURNING_THRESHOLD,
+      message: `Unsafe turning detected - G-force exceeded ${UNSAFE_TURNING_THRESHOLD}g (max: ${Math.round(maxGForce * 1000) / 1000}g)`,
+      severity: maxGForce > 1.0 ? "HIGH" : "MEDIUM",
+      ...additionalData,
+    };
+
+    try {
+      const logger = loggers[logType];
+      // Read existing content
+      let existingContent = "";
+      const fileInfo = await FileSystem.getInfoAsync(logger.uri);
+      if (fileInfo.exists) {
+        existingContent = await FileSystem.readAsStringAsync(logger.uri, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+      }
+
+      // Append new unsafe turning entry
+      const newContent = existingContent + JSON.stringify(unsafeTurningEntry) + "\n";
+
+      // Write the updated content back to the file
+      await FileSystem.writeAsStringAsync(logger.uri, newContent, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+
+      console.log(`Unsafe turning event logged for ${logType}: ${maxGForce}g`);
+    } catch (error) {
+      console.error(`Failed to write unsafe turning event for ${logType}:`, error);
+    }
   }
 };
 
@@ -249,6 +319,19 @@ export const logData = async (logType, data) => {
     }
   }
 
+  // Calculate current g-force for unsafe turning detection
+  const maxGForce = Math.max(
+    Math.abs(currentDeviceMotion.acceleration.x),
+    Math.abs(currentDeviceMotion.acceleration.y),
+    Math.abs(currentDeviceMotion.acceleration.z)
+  );
+
+  // Determine if this snapshot represents unsafe turning
+  const isUnsafeTurning = maxGForce > UNSAFE_TURNING_THRESHOLD;
+  const turningSeverity = isUnsafeTurning 
+    ? (maxGForce > 1.0 ? "HIGH" : "MEDIUM") 
+    : "SAFE";
+
   const logEntry = {
     timestamp: currentTimestamp.toISOString(),
     ...data,
@@ -264,6 +347,14 @@ export const logData = async (logType, data) => {
         beta: Math.round(currentDeviceMotion.rotation.beta * 1000) / 1000,
         gamma: Math.round(currentDeviceMotion.rotation.gamma * 1000) / 1000,
       },
+      maxGForce: Math.round(maxGForce * 1000) / 1000,
+    },
+    turningAnalysis: {
+      isUnsafeTurning: isUnsafeTurning,
+      severity: turningSeverity,
+      threshold: UNSAFE_TURNING_THRESHOLD,
+      maxGForce: Math.round(maxGForce * 1000) / 1000,
+      exceedsThreshold: isUnsafeTurning ? Math.round((maxGForce - UNSAFE_TURNING_THRESHOLD) * 1000) / 1000 : 0,
     },
   };
 
@@ -506,4 +597,43 @@ export const cleanup = () => {
  */
 export const getCurrentDeviceMotion = () => {
   return { ...currentDeviceMotion };
+};
+
+/**
+ * Get unsafe turning events from logs
+ * Returns only the log entries that are marked as UNSAFE_TURNING
+ */
+export const getUnsafeTurningEvents = async (logType) => {
+  if (!loggers[logType]) {
+    console.error("Invalid log type:", logType);
+    return [];
+  }
+
+  try {
+    const logs = await getLogs(logType);
+    return logs.filter(log => log.type === "UNSAFE_TURNING");
+  } catch (error) {
+    console.error(`Failed to get unsafe turning events for ${logType}:`, error);
+    return [];
+  }
+};
+
+/**
+ * Get all unsafe turning events from both sim and real logs
+ */
+export const getAllUnsafeTurningEvents = async () => {
+  try {
+    const simEvents = await getUnsafeTurningEvents("sim");
+    const realEvents = await getUnsafeTurningEvents("real");
+
+    // Combine and sort by timestamp (newest first)
+    const allEvents = [...simEvents, ...realEvents].sort(
+      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+    );
+
+    return allEvents;
+  } catch (error) {
+    console.error("Failed to get all unsafe turning events:", error);
+    return [];
+  }
 };
