@@ -21,6 +21,14 @@ export const MotionScreen = ({ onResetSplash }) => {
 
   const { acceleration, rotation } = motionData;
 
+  // Convert m/s² to G-force (1 G = 9.80665 m/s²)
+  const GRAVITY = 9.80665;
+  const accelerationInGs = {
+    x: acceleration?.x ? acceleration.x / GRAVITY : 0,
+    y: acceleration?.y ? acceleration.y / GRAVITY : 0,
+    z: acceleration?.z ? acceleration.z / GRAVITY : 0,
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.background }]}>
@@ -48,16 +56,16 @@ export const MotionScreen = ({ onResetSplash }) => {
           📱Device Motion
         </Text>
         <Text style={[styles.label, { color: theme.text }]}>
-          Acceleration (w/o gravity):
+          Acceleration (G-force):
         </Text>
         <Text style={[styles.value, { color: theme.textSecondary }]}>
-          x: {acceleration?.x?.toFixed(2)}
+          x: {accelerationInGs.x.toFixed(2)}G
         </Text>
         <Text style={[styles.value, { color: theme.textSecondary }]}>
-          y: {acceleration?.y?.toFixed(2)}
+          y: {accelerationInGs.y.toFixed(2)}G
         </Text>
         <Text style={[styles.value, { color: theme.textSecondary }]}>
-          z: {acceleration?.z?.toFixed(2)}
+          z: {accelerationInGs.z.toFixed(2)}G
         </Text>
         <Text style={[styles.label, { color: theme.text }]}>
           Rotation (radians):
