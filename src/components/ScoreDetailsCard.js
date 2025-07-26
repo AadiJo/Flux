@@ -38,7 +38,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
     { title: "Speed", icon: "speedometer" },
     { title: "Aggression", icon: "speedometer-medium" },
     { title: "Braking", icon: "car-brake-hold" },
-    { title: "Safety", icon: "shield-check" },
+    { title: "Steering", icon: "steering" },
   ];
 
   const formatDuration = (seconds) => {
@@ -585,25 +585,28 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
     </View>
   );
 
-  // Safety Metrics Page Component
-  const SafetyMetricsPage = () => (
+  // Steering Page Component
+  const SteeringPage = () => (
     <View style={[styles.pageContainer, { width: containerWidth }]}>
       <ScrollView style={styles.page} showsVerticalScrollIndicator={false}>
         <View style={styles.pageHeader}>
           <MaterialCommunityIcons
-            name="shield-check"
+            name="steering"
             size={48}
             color={theme.primary}
             style={styles.pageIcon}
           />
           <Text style={[styles.pageTitle, { color: theme.text }]}>
-            Safety Metrics
+            Steering Analysis
+          </Text>
+          <Text style={[styles.pageScore, { color: theme.primary }]}>
+            {`Score: ${breakdown?.steering || 0}`}
           </Text>
         </View>
 
         <View style={styles.metricsSection}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Additional Metrics
+            Steering Statistics
           </Text>
 
           <View style={styles.metricsGrid}>
@@ -617,24 +620,29 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
                 Steering Score
               </Text>
             </View>
-
-            <View style={styles.metricItem}>
-              <Text style={[styles.metricValue, { color: theme.primary }]}>
-                {breakdown?.aggression || 0}
-              </Text>
-              <Text
-                style={[styles.metricLabel, { color: theme.textSecondary }]}
-              >
-                Aggression Score
-              </Text>
-            </View>
           </View>
         </View>
 
-        <Text style={[styles.placeholderText, { color: theme.textSecondary }]}>
-          Comprehensive safety analysis including aggressive driving patterns,
-          steering behavior, and overall safety trends will be available here.
-        </Text>
+        <View style={styles.metricsSection}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>
+            Score Formula
+          </Text>
+          <Text
+            style={[styles.placeholderText, { color: theme.textSecondary }]}
+          >
+            Steering scores are calculated based on steering smoothness, 
+            cornering behavior, and lane keeping stability.
+            {"\n\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>Smooth Steering:</Text>{" "}
+            Higher scores for gradual steering inputs
+            {"\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>Erratic Steering:</Text>{" "}
+            Lower scores for jerky or abrupt steering changes
+            {"\n"}•{" "}
+            <Text style={{ fontWeight: "bold" }}>Lane Stability:</Text>{" "}
+            Consistent lane keeping improves score
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -699,7 +707,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
           <SpeedControlPage />
           <AccelerationPage />
           <BrakingPage />
-          <SafetyMetricsPage />
+          <SteeringPage />
         </ScrollView>
       )}
 
