@@ -36,7 +36,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
   const pages = [
     { title: "Overview", icon: "chart-line" },
     { title: "Speed", icon: "speedometer" },
-    { title: "Acceleration", icon: "speedometer-medium" },
+    { title: "Aggression", icon: "speedometer-medium" },
     { title: "Braking", icon: "car-brake-hold" },
     { title: "Safety", icon: "shield-check" },
   ];
@@ -349,7 +349,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
             style={styles.pageIcon}
           />
           <Text style={[styles.pageTitle, { color: theme.text }]}>
-            Acceleration Analysis
+            Aggression Analysis
           </Text>
           <Text style={[styles.pageScore, { color: theme.primary }]}>
             {`Score: ${breakdown?.acceleration || 0}`}
@@ -358,7 +358,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
 
         <View style={styles.metricsSection}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>
-            Acceleration Statistics
+            Aggression Statistics
           </Text>
 
           <View style={styles.metricsGrid}>
@@ -369,7 +369,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
               <Text
                 style={[styles.metricLabel, { color: theme.textSecondary }]}
               >
-                Acceleration Events
+                Aggression Events
               </Text>
             </View>
 
@@ -380,7 +380,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
               <Text
                 style={[styles.metricLabel, { color: theme.textSecondary }]}
               >
-                Average Acceleration
+                Average Aggression
               </Text>
             </View>
 
@@ -391,7 +391,7 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
               <Text
                 style={[styles.metricLabel, { color: theme.textSecondary }]}
               >
-                Max Acceleration
+                Max Aggression
               </Text>
             </View>
 
@@ -437,8 +437,8 @@ export const ScoreDetailsCard = ({ onClose, style, initialPage = 0 }) => {
           <Text
             style={[styles.placeholderText, { color: theme.textSecondary }]}
           >
-            Acceleration scores are calculated using a piecewise linear function
-            based on your average acceleration patterns:
+            Aggression scores are calculated using a piecewise linear function
+            based on your average aggression patterns:
             {"\n\n"}•{" "}
             <Text style={{ fontWeight: "bold" }}>Ideal Range (2-6 mph/s):</Text>{" "}
             100 points
