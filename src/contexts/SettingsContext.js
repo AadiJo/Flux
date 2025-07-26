@@ -5,6 +5,7 @@ const SettingsContext = createContext();
 
 export const SettingsProvider = ({ children }) => {
   const [speedingThreshold, setSpeedingThreshold] = useState(5); // Default value
+  const [scoreProvider, setScoreProvider] = useState("Flux"); // Default value
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -13,6 +14,11 @@ export const SettingsProvider = ({ children }) => {
         const storedThreshold = await AsyncStorage.getItem("speedingThreshold");
         if (storedThreshold !== null) {
           setSpeedingThreshold(JSON.parse(storedThreshold));
+        }
+        
+        const storedScoreProvider = await AsyncStorage.getItem("scoreProvider");
+        if (storedScoreProvider !== null) {
+          setScoreProvider(JSON.parse(storedScoreProvider));
         }
       } catch (e) {
         console.error("Failed to load settings.", e);
@@ -36,13 +42,30 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
+  const updateScoreProvider = async (newProvider) => {
+    try {
+      setScoreProvider(newProvider);
+      await AsyncStorage.setItem(
+        "scoreProvider",
+        JSON.stringify(newProvider)
+      );
+    } catch (e) {
+      console.error("Failed to save score provider setting.", e);
+    }
+  };
+
   if (!isLoaded) {
     return null; // or a loading spinner
   }
 
   return (
     <SettingsContext.Provider
-      value={{ speedingThreshold, updateSpeedingThreshold }}
+      value={{ 
+        speedingThreshold, 
+        updateSpeedingThreshold,
+        scoreProvider,
+        updateScoreProvider
+      }}
     >
       {children}
     </SettingsContext.Provider>

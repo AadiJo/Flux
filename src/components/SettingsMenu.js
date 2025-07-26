@@ -5,15 +5,16 @@ import {
   View,
   Text,
   StyleSheet,
-  Animated,
   TextInput,
   Alert,
+  FlatList,
+  ScrollView,
+  Dimensions,
+  Animated,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSettings } from "../contexts/SettingsContext";
-import { SPRING_CONFIG, TIMING_CONFIG } from "../utils/animationConfig";
 import * as FileSystem from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import * as Sharing from "expo-sharing";
@@ -53,13 +54,17 @@ export const SettingsMenu = ({
   updateSpeedingPinsFromLogs,
 }) => {
   const { theme, isDark } = useTheme();
-  const { speedingThreshold, updateSpeedingThreshold } = useSettings();
+  const { speedingThreshold, updateSpeedingThreshold, scoreProvider, updateScoreProvider } = useSettings();
   const [showingModal, setShowingModal] = useState(visible);
   const [localThreshold, setLocalThreshold] = useState(speedingThreshold);
+  const [localScoreProvider, setLocalScoreProvider] = useState(scoreProvider);
+  const [showScoreProviderDropdown, setShowScoreProviderDropdown] = useState(false);
   const [protocolId, setProtocolId] = useState(null);
 
-  const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const menuScale = useRef(new Animated.Value(0.95)).current;
+  const scoreProviderOptions = ["Flux"]; // Only Flux for now
+  const screenHeight = Dimensions.get("window").height;
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const simLogUri = FileSystem.documentDirectory + "sim_session_logs.jsonl";
   const realLogUri = FileSystem.documentDirectory + "real_session_logs.jsonl";
@@ -67,9 +72,16 @@ export const SettingsMenu = ({
   useEffect(() => {
     if (visible) {
       setLocalThreshold(speedingThreshold);
+      setLocalScoreProvider(scoreProvider);
       setShowingModal(true);
-      overlayOpacity.setValue(0);
-      menuScale.setValue(0.95);
+      
+      // Reset and start fade in animation for background
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
 
       // Fetch the stored protocol when menu opens
       const fetchProtocol = async () => {
@@ -82,32 +94,17 @@ export const SettingsMenu = ({
         }
       };
       fetchProtocol();
-
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 1,
-          ...TIMING_CONFIG,
-        }),
-        Animated.spring(menuScale, {
-          toValue: 1,
-          ...SPRING_CONFIG,
-        }),
-      ]).start();
     } else if (showingModal) {
-      Animated.parallel([
-        Animated.timing(overlayOpacity, {
-          toValue: 0,
-          ...TIMING_CONFIG,
-        }),
-        Animated.timing(menuScale, {
-          toValue: 0.95,
-          ...TIMING_CONFIG,
-        }),
-      ]).start(() => {
+      // Fade out background before closing
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => {
         setShowingModal(false);
       });
     }
-  }, [visible, showingModal, overlayOpacity, menuScale, speedingThreshold]);
+  }, [visible, showingModal, speedingThreshold, scoreProvider, fadeAnim]);
 
   const handleExport = async (logType) => {
     const uri = logType === "sim" ? simLogUri : realLogUri;
@@ -164,7 +161,8 @@ export const SettingsMenu = ({
 
   const handleClose = () => {
     updateSpeedingThreshold(localThreshold);
-    onClose();
+    updateScoreProvider(localScoreProvider);
+    onClose(); // This will trigger useEffect to handle animation
   };
 
   const handleMigrateLogs = async () => {
@@ -384,180 +382,252 @@ export const SettingsMenu = ({
       animationType="none"
       onRequestClose={handleClose}
     >
-      <TouchableOpacity
+      <Animated.View 
         style={[
-          styles.modalOverlay,
-          {
-            backgroundColor: theme.dark
-              ? "rgba(0, 0, 0, 0.98)"
-              : "rgba(0, 0, 0, 0.65)",
-          },
+          styles.modalOverlay, 
+          { 
+            backgroundColor: "rgba(0, 0, 0, 0.7)",
+            opacity: fadeAnim 
+          }
         ]}
-        activeOpacity={1}
-        onPress={handleClose}
       >
         <TouchableOpacity
+          style={StyleSheet.absoluteFill}
           activeOpacity={1}
-          onPress={(e) => e.stopPropagation()}
-        >
-          <Animated.View
-            style={[
-              styles.menu,
-              {
-                backgroundColor: "transparent",
-                opacity: overlayOpacity,
-                transform: [{ scale: menuScale }],
-              },
-            ]}
-          >
-            <BlurView
-              intensity={isDark ? 80 : 140}
-              tint={isDark ? "dark" : "light"}
-              style={[
-                StyleSheet.absoluteFill,
+          onPress={() => {
+            setShowScoreProviderDropdown(false);
+            handleClose();
+          }}
+        />
+        <Animated.View
+          style={[
+            styles.menu,
+            {
+              backgroundColor: theme.card,
+              transform: [
                 {
-                  backgroundColor: isDark
-                    ? "rgba(10, 10, 10, 0.4)"
-                    : "rgba(255, 255, 255, 0.5)",
-                  overflow: "hidden",
-                  borderRadius: 16,
+                  translateY: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [50, 0],
+                  }),
                 },
-              ]}
-              experimentalBlurMethod="dimezis"
-            />
-            <View style={styles.settingOption}>
-              <Text style={[styles.settingLabel, { color: theme.text }]}>
-                Speeding Threshold
-              </Text>
-              <View style={styles.valueContainer}>
-                <TouchableOpacity
-                  onPress={handleDecrement}
-                  style={styles.button}
-                >
-                  <MaterialCommunityIcons
-                    name="minus"
-                    size={24}
-                    color={theme.primary}
+              ],
+            },
+          ]}
+        >
+          <ScrollView 
+            style={styles.scrollContainer}
+            showsVerticalScrollIndicator={true}
+            bounces={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+          >
+              <View style={styles.settingOption}>
+                <Text style={[styles.settingLabel, { color: theme.text }]}>
+                  Speeding Threshold
+                </Text>
+                <View style={styles.valueContainer}>
+                  <TouchableOpacity
+                    onPress={handleDecrement}
+                    style={styles.button}
+                  >
+                    <MaterialCommunityIcons
+                      name="minus"
+                      size={24}
+                      color={theme.primary}
+                    />
+                  </TouchableOpacity>
+                  <TextInput
+                    style={[
+                      styles.valueInput,
+                      { color: theme.text, borderColor: theme.border },
+                    ]}
+                    value={String(localThreshold)}
+                    onChangeText={(text) => {
+                      const numValue = parseInt(text, 10);
+                      setLocalThreshold(isNaN(numValue) ? 0 : numValue);
+                    }}
+                    keyboardType="number-pad"
+                    textAlign="center"
                   />
-                </TouchableOpacity>
-                <TextInput
-                  style={[
-                    styles.valueInput,
-                    { color: theme.text, borderColor: theme.border },
-                  ]}
-                  value={String(localThreshold)}
-                  onChangeText={(text) => {
-                    const numValue = parseInt(text, 10);
-                    setLocalThreshold(isNaN(numValue) ? 0 : numValue);
-                  }}
-                  keyboardType="number-pad"
-                  textAlign="center"
-                />
-                <TouchableOpacity
-                  onPress={handleIncrement}
-                  style={styles.button}
-                >
-                  <MaterialCommunityIcons
-                    name="plus"
-                    size={24}
-                    color={theme.primary}
-                  />
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleIncrement}
+                    style={styles.button}
+                  >
+                    <MaterialCommunityIcons
+                      name="plus"
+                      size={24}
+                      color={theme.primary}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
 
-            <BackgroundMonitoringCard />
+              <View style={styles.settingOption}>
+                <Text style={[styles.settingLabel, { color: theme.text }]}>
+                  Score Provider
+                </Text>
+                <View style={styles.dropdownWrapper}>
+                  <TouchableOpacity
+                    style={[
+                      styles.dropdownButton,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                      },
+                    ]}
+                    onPress={() => setShowScoreProviderDropdown(!showScoreProviderDropdown)}
+                  >
+                    <Text style={[styles.dropdownButtonText, { color: theme.text }]}>
+                      {localScoreProvider}
+                    </Text>
+                    <MaterialCommunityIcons
+                      name={showScoreProviderDropdown ? "chevron-up" : "chevron-down"}
+                      size={24}
+                      color={theme.text}
+                    />
+                  </TouchableOpacity>
+                  
+                  {showScoreProviderDropdown && (
+                    <View
+                      style={[
+                        styles.dropdownContainer,
+                        {
+                          backgroundColor: theme.card,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                    >
+                      {scoreProviderOptions.map((option) => (
+                        <TouchableOpacity
+                          key={option}
+                          style={[
+                            styles.dropdownOption,
+                            localScoreProvider === option && {
+                              backgroundColor: theme.primary + "20",
+                            },
+                          ]}
+                          onPress={() => {
+                            setLocalScoreProvider(option);
+                            setShowScoreProviderDropdown(false);
+                          }}
+                        >
+                          <Text
+                            style={[
+                              styles.dropdownOptionText,
+                              {
+                                color: localScoreProvider === option ? theme.primary : theme.text,
+                                fontWeight: localScoreProvider === option ? "600" : "400",
+                              },
+                            ]}
+                          >
+                            {option}
+                          </Text>
+                          {localScoreProvider === option && (
+                            <MaterialCommunityIcons
+                              name="check"
+                              size={20}
+                              color={theme.primary}
+                            />
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              </View>
 
-            <View style={styles.separator} />
+              <BackgroundMonitoringCard />
 
-            <View key="sim-actions" style={styles.logActions}>
-              <SettingButton
-                label="Import Sim"
-                icon="file-import-outline"
-                onPress={() => handleImport("sim")}
-                theme={theme}
-              />
-              <SettingButton
-                label="Export Sim"
-                icon="file-export-outline"
-                onPress={() => handleExport("sim")}
-                theme={theme}
-              />
-            </View>
+              <View style={styles.separator} />
 
-            <View key="real-actions" style={styles.logActions}>
-              <SettingButton
-                label="Import Real"
-                icon="file-import-outline"
-                onPress={() => handleImport("real")}
-                theme={theme}
-              />
-              <SettingButton
-                label="Export Real"
-                icon="file-export-outline"
-                onPress={() => handleExport("real")}
-                theme={theme}
-              />
-            </View>
+              <View key="sim-actions" style={styles.logActions}>
+                <SettingButton
+                  label="Import Sim"
+                  icon="file-import-outline"
+                  onPress={() => handleImport("sim")}
+                  theme={theme}
+                />
+                <SettingButton
+                  label="Export Sim"
+                  icon="file-export-outline"
+                  onPress={() => handleExport("sim")}
+                  theme={theme}
+                />
+              </View>
 
-            <View style={styles.separator} />
+              <View key="real-actions" style={styles.logActions}>
+                <SettingButton
+                  label="Import Real"
+                  icon="file-import-outline"
+                  onPress={() => handleImport("real")}
+                  theme={theme}
+                />
+                <SettingButton
+                  label="Export Real"
+                  icon="file-export-outline"
+                  onPress={() => handleExport("real")}
+                  theme={theme}
+                />
+              </View>
 
-            <View key="tools-actions" style={styles.logActions}>
-              <SettingButton
-                label="Migrate Logs"
-                icon="database-sync-outline"
-                onPress={handleMigrateLogs}
-                theme={theme}
-              />
-              <SettingButton
-                label="Refresh Scores"
-                icon="refresh"
-                onPress={handleForceRefreshScores}
-                theme={theme}
-              />
-            </View>
+              <View style={styles.separator} />
 
-            <View style={styles.separator} />
+              <View key="tools-actions" style={styles.logActions}>
+                <SettingButton
+                  label="Migrate Logs"
+                  icon="database-sync-outline"
+                  onPress={handleMigrateLogs}
+                  theme={theme}
+                />
+                <SettingButton
+                  label="Refresh Scores"
+                  icon="refresh"
+                  onPress={handleForceRefreshScores}
+                  theme={theme}
+                />
+              </View>
 
-            <View key="debug-actions" style={styles.logActions}>
-              <SettingButton
-                label="Score Debug"
-                icon="bug-outline"
-                onPress={() => {
-                  onClose();
-                  // Navigate to score debug screen
-                  // This would need navigation prop passed to SettingsMenu
-                  console.log("Score debug pressed - implement navigation");
-                }}
-                theme={theme}
-              />
-              <SettingButton
-                label="Debug Logs"
-                icon="bug-check-outline"
-                onPress={handleDebugLogs}
-                theme={theme}
-              />
-            </View>
+              <View style={styles.separator} />
 
-            <View style={styles.separator} />
+              <View key="debug-actions" style={styles.logActions}>
+                <SettingButton
+                  label="Score Debug"
+                  icon="bug-outline"
+                  onPress={() => {
+                    onClose();
+                    // Navigate to score debug screen
+                    // This would need navigation prop passed to SettingsMenu
+                    console.log("Score debug pressed - implement navigation");
+                  }}
+                  theme={theme}
+                />
+                <SettingButton
+                  label="Debug Logs"
+                  icon="bug-check-outline"
+                  onPress={handleDebugLogs}
+                  theme={theme}
+                />
+              </View>
 
-            <Text style={[styles.protocolText, { color: theme.textSecondary }]}>
-              {protocolId
-                ? `OBD Protocol: ${protocolId}`
-                : "No OBD Protocol Configured"}
-            </Text>
+              <View style={styles.separator} />
 
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-              <Text style={[styles.closeButtonText, { color: theme.primary }]}>
-                Done
+              <Text style={[styles.protocolText, { color: theme.textSecondary }]}>
+                {protocolId
+                  ? `OBD Protocol: ${protocolId}`
+                  : "No OBD Protocol Configured"}
               </Text>
-            </TouchableOpacity>
+
+              <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                <Text style={[styles.closeButtonText, { color: theme.primary }]}>
+                  Done
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
           </Animated.View>
-        </TouchableOpacity>
-      </TouchableOpacity>
-    </Modal>
-  );
-};
+        </Animated.View>
+      </Modal>
+    );
+  };
 
 const styles = StyleSheet.create({
   modalOverlay: {
@@ -566,11 +636,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   menu: {
-    width: "80%",
+    width: "98%",
+    maxHeight: "80%",
     backgroundColor: "transparent",
     borderRadius: 16,
-    overflow: "hidden",
     padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  scrollContainer: {
+    flexGrow: 1,
   },
   settingOption: {
     marginBottom: 20,
@@ -644,5 +725,52 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 10,
     fontWeight: "500",
+  },
+  dropdownWrapper: {
+    position: "relative",
+    zIndex: 1000,
+  },
+  dropdownButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  dropdownButtonText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  dropdownContainer: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginTop: 4,
+    overflow: "hidden",
+    zIndex: 1001,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  dropdownOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  dropdownOptionText: {
+    fontSize: 16,
   },
 });
