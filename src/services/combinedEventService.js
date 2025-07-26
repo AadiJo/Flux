@@ -1,6 +1,7 @@
 import { getSpeedingPinsForTrip } from "./speedingService";
 import { getAccelerationPinsForTrip } from "./accelerationService";
 import { getBrakingPinsForTrip } from "./brakingService";
+import { getUnsafeTurningPinsForTrip } from "./unsafeTurningService";
 
 // Distance calculation helper
 const getDistanceInFeet = (coord1, coord2) => {
@@ -25,13 +26,15 @@ const getDistanceInFeet = (coord1, coord2) => {
  * @param {number} speedingThreshold - The speeding threshold
  * @param {number} accelerationThreshold - The acceleration threshold (default 6 mph/s)
  * @param {number} brakingThreshold - The braking threshold (default -8 mph/s)
+ * @param {number} gForceThreshold - The g-force threshold for unsafe turning (default 0.85)
  * @returns {Promise<Array>} - Array of combined event pins
  */
 export const getCombinedEventPinsForTrip = async (
   trip,
   speedingThreshold = 5,
   accelerationThreshold = 6,
-  brakingThreshold = -8
+  brakingThreshold = -8,
+  gForceThreshold = 0.85
 ) => {
   console.log("Getting combined event pins for trip:", trip.roadName);
 
@@ -41,16 +44,18 @@ export const getCombinedEventPinsForTrip = async (
   }
 
   // Get individual event pins
-  const [speedingPins, accelerationPins, brakingPins] = await Promise.all([
+  const [speedingPins, accelerationPins, brakingPins, unsafeTurningPins] = await Promise.all([
     getSpeedingPinsForTrip(speedingThreshold, trip),
     getAccelerationPinsForTrip(accelerationThreshold, trip),
     getBrakingPinsForTrip(brakingThreshold, trip),
+    getUnsafeTurningPinsForTrip(gForceThreshold, trip),
   ]);
 
   console.log("Individual pins:", {
     speeding: speedingPins.length,
     acceleration: accelerationPins.length,
     braking: brakingPins.length,
+    unsafeTurning: unsafeTurningPins.length,
   });
 
   // Create combined events array with type information
@@ -58,6 +63,7 @@ export const getCombinedEventPinsForTrip = async (
     ...speedingPins.map(pin => ({ ...pin, type: 'speeding', color: 'red' })),
     ...accelerationPins.map(pin => ({ ...pin, type: 'acceleration', color: 'orange' })),
     ...brakingPins.map(pin => ({ ...pin, type: 'braking', color: 'yellow' })),
+    ...unsafeTurningPins.map(pin => ({ ...pin, type: 'unsafeTurning', color: 'blue' })),
   ];
 
   // Group events by proximity (within 100 feet)
@@ -111,13 +117,16 @@ export const getCombinedEventPinsForTrip = async (
     const avgLatitude = events.reduce((sum, event) => sum + event.latitude, 0) / events.length;
     const avgLongitude = events.reduce((sum, event) => sum + event.longitude, 0) / events.length;
     
-    // Determine pin color based on event priority: speeding > braking > acceleration
+    // Determine pin color based on event priority: speeding > unsafe turning > braking > acceleration
     let pinColor = 'orange'; // default to acceleration
     let primaryEvent = events.find(e => e.type === 'acceleration') || events[0];
     
     if (events.some(e => e.type === 'speeding')) {
       pinColor = 'red';
       primaryEvent = events.find(e => e.type === 'speeding');
+    } else if (events.some(e => e.type === 'unsafeTurning')) {
+      pinColor = 'blue';
+      primaryEvent = events.find(e => e.type === 'unsafeTurning');
     } else if (events.some(e => e.type === 'braking')) {
       pinColor = 'yellow';
       primaryEvent = events.find(e => e.type === 'braking');
@@ -128,6 +137,7 @@ export const getCombinedEventPinsForTrip = async (
       speeding: events.filter(e => e.type === 'speeding'),
       acceleration: events.filter(e => e.type === 'acceleration'),
       braking: events.filter(e => e.type === 'braking'),
+      unsafeTurning: events.filter(e => e.type === 'unsafeTurning'),
     };
 
     return {
@@ -151,6 +161,11 @@ export const getCombinedEventPinsForTrip = async (
       }),
       ...(primaryEvent.type === 'braking' && {
         braking: primaryEvent.braking,
+      }),
+      ...(primaryEvent.type === 'unsafeTurning' && {
+        gForce: primaryEvent.gForce,
+        severity: primaryEvent.severity,
+        exceedsThreshold: primaryEvent.exceedsThreshold,
       }),
     };
   });

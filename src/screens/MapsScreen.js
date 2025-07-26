@@ -19,6 +19,7 @@ import { getSpeedingPinsForTrip } from "../services/speedingService";
 import { getAccelerationPinsForTrip } from "../services/accelerationService";
 import { getBrakingPinsForTrip } from "../services/brakingService";
 import { getCombinedEventPinsForTrip } from "../services/combinedEventService";
+import { getUnsafeTurningPinsForTrip } from "../services/unsafeTurningService";
 import { TripSelectionModal } from "../components/TripSelectionModal";
 
 export const MapsScreen = ({
@@ -48,8 +49,8 @@ export const MapsScreen = ({
     try {
       console.log("Loading trip data for:", trip.roadName);
       
-      // Load combined event pins that merge nearby events
-      const combinedPins = await getCombinedEventPinsForTrip(trip, speedingThreshold, 6, -8);
+      // Load combined event pins that merge nearby events (including unsafe turning)
+      const combinedPins = await getCombinedEventPinsForTrip(trip, speedingThreshold, 6, -8, 0.85);
       setCombinedEventPins(combinedPins);
       
       // Set initial map region based on pins or logs
@@ -159,6 +160,7 @@ export const MapsScreen = ({
           <Text style={[styles.speedingHeader, { color: theme.text }]}>
             {pin.primaryEvent.type === 'speeding' ? 'Speeding Details' :
              pin.primaryEvent.type === 'acceleration' ? 'Harsh Acceleration' :
+             pin.primaryEvent.type === 'unsafeTurning' ? 'Unsafe Turning' :
              'Harsh Braking'}
           </Text>
         )}
@@ -205,6 +207,30 @@ export const MapsScreen = ({
             <Text style={[styles.speedingInfo, { color: theme.text, fontWeight: "bold" }]}>
               {event.braking > 8 ? `${(event.braking - 8).toFixed(1)} mph/s over recommended` : 'Within safe range'}
             </Text>
+          </View>
+        ))}
+        
+        {/* Unsafe Turning Events */}
+        {eventsByType.unsafeTurning.length > 0 && eventsByType.unsafeTurning.map((event, idx) => (
+          <View key={`unsafeTurning-${idx}`} style={styles.eventSection}>
+            {hasMultipleTypes && <Text style={[styles.eventType, { color: '#0066ff' }]}>🔵 Unsafe Turning</Text>}
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Max G-Force: {event.gForce.toFixed(2)}g
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Severity: {event.severity}
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text }]}>
+              Speed: {Math.round(event.speed)} mph
+            </Text>
+            <Text style={[styles.speedingInfo, { color: theme.text, fontWeight: "bold" }]}>
+              {event.exceedsThreshold.toFixed(2)}g over {event.threshold || 0.85}g threshold
+            </Text>
+            {event.gForceValues && (
+              <Text style={[styles.speedingInfo, { color: theme.textSecondary, fontSize: 12 }]}>
+                G-Forces: X:{event.gForceValues.x.toFixed(2)} Y:{event.gForceValues.y.toFixed(2)} Z:{event.gForceValues.z.toFixed(2)}
+              </Text>
+            )}
           </View>
         ))}
       </View>
