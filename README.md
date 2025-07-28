@@ -55,7 +55,7 @@ With these features, the finished product will empower parents to coach their te
 - ✅ Explicit background service
 - Driving advice?
 - ✅ Color coded pins for different events
-- Integration / Custom FW for further optimization
+- 🟨 Integration / Custom FW for further optimization
 - 🟨 Individual score breakdowns
 - 🟨 Styling cleanup
 - Third-party OBD support
