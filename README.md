@@ -9,7 +9,7 @@
 ## Screenshots
 
 <p align="center">
-  <img src="https://i.postimg.cc/Y9qQVG3j/Flux-Screenshots.png" alt="screenshots" />
+  <img src="./screenshots/Flux-Screenshots.png" alt="screenshots" />
 </p>
 
 ## Codebase Structure
