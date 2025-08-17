@@ -29,6 +29,7 @@ export const MapsScreen = ({
   updateSpeedingPinsFromLogs,
   homeSelectedTrip,
   setHomeSelectedTrip,
+  openTripSelectorKey, // new: signal from navbar to open selector
 }) => {
   const { theme, isDark } = useTheme();
   const { speedingThreshold } = useSettings();
@@ -44,8 +45,11 @@ export const MapsScreen = ({
   // Animation values
   const slideAnim = useRef(new Animated.Value(0)).current;
 
+  // Track first-run to avoid reacting to initial prop value when mounting
+  const navPressFirstRender = useRef(true);
+
   // Load trip data when a trip is selected
-  const loadTripData = async (trip) => {
+  const loadTripData = async (trip, { animate = true } = {}) => {
     try {
       console.log("Loading trip data for:", trip.roadName);
       
@@ -65,18 +69,28 @@ export const MapsScreen = ({
           );
         }
       }
+
+      // Persist the selected trip to parent so it survives tab switches
+      if (setHomeSelectedTrip) setHomeSelectedTrip(trip);
+
       setSelectedTrip(trip);
       setShowTripSelection(false);
-      // Small delay to ensure state updates are applied
-      setTimeout(() => {
-        slideAnim.setValue(0);
-        Animated.timing(slideAnim, {
-          toValue: 1,
-          duration: 200,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      }, 50);
+
+      if (animate) {
+        // Small delay to ensure state updates are applied
+        setTimeout(() => {
+          slideAnim.setValue(0);
+          Animated.timing(slideAnim, {
+            toValue: 1,
+            duration: 200,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }).start();
+        }, 50);
+      } else {
+        // Instantly show without animation when restoring
+        slideAnim.setValue(1);
+      }
     } catch (error) {
       console.error("Failed to load trip data:", error);
     }
@@ -84,7 +98,8 @@ export const MapsScreen = ({
 
   useEffect(() => {
     if (homeSelectedTrip) {
-      loadTripData(homeSelectedTrip);
+      // Restore trip without enter animation
+      loadTripData(homeSelectedTrip, { animate: false });
     } else if (homeSelectedTrip === null && showTripSelection === false) {
       // If explicitly set to null, show trip selection
       setShowTripSelection(true);
@@ -96,6 +111,25 @@ export const MapsScreen = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [homeSelectedTrip]);
+
+  // React when Maps tab is tapped again while already on Maps
+  useEffect(() => {
+    if (navPressFirstRender.current) {
+      navPressFirstRender.current = false;
+      return;
+    }
+    if (!openTripSelectorKey) return;
+    // Open selector without clearing parent's selected trip
+    if (showTripSelection === false) {
+      setTripSpeedingPins([]);
+      setTripAccelerationPins([]);
+      setTripBrakingPins([]);
+      setCombinedEventPins([]);
+      setSelectedTrip(null);
+      setShowTripSelection(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openTripSelectorKey]);
 
   const handleBackToTripSelection = () => {
     setTripSpeedingPins([]);
@@ -239,7 +273,7 @@ export const MapsScreen = ({
 
   // Show trip selection modal
   if (showTripSelection) {
-    return <TripSelectionModal onSelectTrip={loadTripData} />;
+    return <TripSelectionModal onSelectTrip={(trip) => loadTripData(trip, { animate: true })} />;
   }
 
   // Show loading if no trip selected and no region set

@@ -52,6 +52,7 @@ const AppContent = () => {
   const [streetName, setStreetName] = useState(null);
   const [speedingPins, setSpeedingPins] = useState([]);
   const [homeSelectedTrip, setHomeSelectedTrip] = useState(null);
+  const [openTripSelectorKey, setOpenTripSelectorKey] = useState(0); // signal to open selector inside Maps
 
   const updateSpeedingPinsFromLogs = async () => {
     const pins = await getSpeedingPins(speedingThreshold);
@@ -185,6 +186,7 @@ const AppContent = () => {
             updateSpeedingPinsFromLogs={updateSpeedingPinsFromLogs}
             homeSelectedTrip={homeSelectedTrip}
             setHomeSelectedTrip={setHomeSelectedTrip}
+            openTripSelectorKey={openTripSelectorKey}
           />
         ) : (
           <View
@@ -362,7 +364,14 @@ const AppContent = () => {
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => setSelectedMode("maps")}
+            onPress={() => {
+              if (selectedMode === "maps") {
+                // Already on Maps: open trip selector without clearing the persisted trip
+                setOpenTripSelectorKey((k) => k + 1);
+              } else {
+                setSelectedMode("maps");
+              }
+            }}
           >
             <MaterialCommunityIcons
               name="map"
