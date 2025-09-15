@@ -54,7 +54,7 @@ export const MapsScreen = ({
       console.log("Loading trip data for:", trip.roadName);
       
       // Load combined event pins that merge nearby events (including unsafe turning)
-      const combinedPins = await getCombinedEventPinsForTrip(trip, speedingThreshold, 6, -8, 0.85);
+      const combinedPins = await getCombinedEventPinsForTrip(trip, speedingThreshold, 6, -8, 1.1);
       setCombinedEventPins(combinedPins);
       
       // Set initial map region based on pins or logs
@@ -258,7 +258,7 @@ export const MapsScreen = ({
               Speed: {Math.round(event.speed)} mph
             </Text>
             <Text style={[styles.speedingInfo, { color: theme.text, fontWeight: "bold" }]}>
-              {event.exceedsThreshold.toFixed(2)}g over {event.threshold || 0.85}g threshold
+              {event.exceedsThreshold.toFixed(2)}g over {event.threshold || 1.1}g threshold
             </Text>
             {event.gForceValues && (
               <Text style={[styles.speedingInfo, { color: theme.textSecondary, fontSize: 12 }]}>

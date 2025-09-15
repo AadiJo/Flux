@@ -4,12 +4,12 @@
 
 /**
  * Gets unsafe turning pins for a specific trip based on g-force threshold
- * @param {number} gForceThreshold - The g-force threshold (default 0.85)
+ * @param {number} gForceThreshold - The g-force threshold (default 1.1)
  * @param {Object} trip - The trip object containing logs
  * @returns {Promise<Array>} - Array of unsafe turning pins
  */
 export const getUnsafeTurningPinsForTrip = async (
-  gForceThreshold = 0.85,
+  gForceThreshold = 1.1,
   trip
 ) => {
   console.log("Getting unsafe turning pins for trip:", trip?.roadName);

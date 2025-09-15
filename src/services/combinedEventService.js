@@ -26,7 +26,7 @@ const getDistanceInFeet = (coord1, coord2) => {
  * @param {number} speedingThreshold - The speeding threshold
  * @param {number} accelerationThreshold - The acceleration threshold (default 6 mph/s)
  * @param {number} brakingThreshold - The braking threshold (default -8 mph/s)
- * @param {number} gForceThreshold - The g-force threshold for unsafe turning (default 0.85)
+ * @param {number} gForceThreshold - The g-force threshold for unsafe turning (default 1.1)
  * @returns {Promise<Array>} - Array of combined event pins
  */
 export const getCombinedEventPinsForTrip = async (
@@ -34,7 +34,7 @@ export const getCombinedEventPinsForTrip = async (
   speedingThreshold = 5,
   accelerationThreshold = 6,
   brakingThreshold = -8,
-  gForceThreshold = 0.85
+  gForceThreshold = 1.1
 ) => {
   console.log("Getting combined event pins for trip:", trip.roadName);
 

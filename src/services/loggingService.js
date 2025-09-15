@@ -22,7 +22,7 @@ let currentDeviceMotion = {
 let motionSubscription = null;
 
 // G-force threshold for unsafe turning detection (in g units)
-const UNSAFE_TURNING_THRESHOLD = 0.85;
+const UNSAFE_TURNING_THRESHOLD = 1.1;
 
 const loggers = {
   sim: {
@@ -189,7 +189,7 @@ const checkAndLogUnsafeTurning = async (logType, acceleration, additionalData = 
       },
       threshold: UNSAFE_TURNING_THRESHOLD,
       message: `Unsafe turning detected - G-force exceeded ${UNSAFE_TURNING_THRESHOLD}g (max: ${Math.round(maxGForce * 1000) / 1000}g)`,
-      severity: maxGForce > 1.0 ? "HIGH" : "MEDIUM",
+      severity: maxGForce > 1.5 ? "HIGH" : "MEDIUM",
       ...additionalData,
     };
 
@@ -329,7 +329,7 @@ export const logData = async (logType, data) => {
   // Determine if this snapshot represents unsafe turning
   const isUnsafeTurning = maxGForce > UNSAFE_TURNING_THRESHOLD;
   const turningSeverity = isUnsafeTurning 
-    ? (maxGForce > 1.0 ? "HIGH" : "MEDIUM") 
+    ? (maxGForce > 1.5 ? "HIGH" : "MEDIUM") 
     : "SAFE";
 
   const logEntry = {
