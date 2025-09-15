@@ -17,7 +17,7 @@
       "splash": {
         "image": "src/assets/splash.png",
         "resizeMode": "contain",
-        "backgroundColor": "#00202ds"
+        "backgroundColor": "#00202d"
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Flux needs access to track your speed and location.",
@@ -66,7 +66,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#00202d"
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
