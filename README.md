@@ -50,7 +50,7 @@ With these features, the finished product will empower parents to coach their te
 - ✅ Async location processing
 - ✅ Event pin markers
 - ✅ Background monitoring
-- 🟨 Automatic OBD configuring
+- ✅ Automatic OBD configuring
 - 🟨 Steering readings from phone sensors
 - ✅ Explicit background service
 - Driving advice?
