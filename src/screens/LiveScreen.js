@@ -33,6 +33,9 @@ import {
   stopBackgroundMonitoring, 
   isBackgroundMonitoringActive 
 } from "../services/backgroundService";
+import { createLogger } from "../utils/debugLogger";
+
+const logger = createLogger('LiveScreen');
 
 const screenWidth = Dimensions.get("window").width;
 const LAST_ALERT_KEY = "last_speeding_alert_timestamp";
@@ -96,7 +99,7 @@ export const LiveScreen = ({
   const bannerShown = useRef(false);
   const lastStreetName = useRef(null);
 
-  console.log("Speeding threshold on LiveScreen:", speedingThreshold);
+  logger.debug("Speeding threshold on LiveScreen:", speedingThreshold);
 
   const isConnected = isWicanSimulated || isWicanConnected;
   const isDataAvailable = isApiConnected || isWicanSimulated;
@@ -121,15 +124,15 @@ export const LiveScreen = ({
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
-      console.log("Network state changed:", state);
+      logger.info("Network state changed:", state);
       if (state.type === "wifi" && state.isConnected) {
         setNetworkDetails(state.details);
         setIsWicanConnected(true);
-        console.log("WiFi connected:", state.details);
+        logger.info("WiFi connected:", state.details);
       } else {
         setIsWicanConnected(false);
         setNetworkDetails(null);
-        console.log("WiFi disconnected");
+        logger.info("WiFi disconnected");
       }
     });
 
@@ -140,10 +143,10 @@ export const LiveScreen = ({
 
   useEffect(() => {
     if (isConnected) {
-      console.log("Starting data polling...");
+      logger.debug("Starting data polling...");
       fetchData();
       dataInterval.current = setInterval(fetchData, 1000); // Poll every second    } else {
-      console.log("Stopping data polling...");
+      logger.debug("Stopping data polling...");
       if (dataInterval.current) {
         clearInterval(dataInterval.current);
         dataInterval.current = null;
@@ -223,7 +226,7 @@ export const LiveScreen = ({
   }, [isLogging, obd2Data, location, streetName, speedLimit]);
   const fetchData = async () => {
     if (isWicanSimulated) {
-      console.log("Fetching simulated data...");
+      logger.debug("Fetching simulated data...");
       const newObd2Data = {
         speed: Math.floor(60 + Math.random() * 10 - 5),
         rpm: Math.floor(2000 + Math.random() * 500 - 250),

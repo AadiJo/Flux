@@ -1,4 +1,7 @@
 import { getLogs } from "./loggingService";
+import { createLogger } from "../utils/debugLogger";
+
+const logger = createLogger('AccelerationService');
 
 // Distance calculation helper (copied from speedingService)
 const getDistanceInFeet = (coord1, coord2) => {
@@ -23,7 +26,7 @@ const getDistanceInFeet = (coord1, coord2) => {
  * @returns {Promise<Array>} - Array of acceleration event pins
  */
 export const getAccelerationPins = async (accelerationThreshold = 6) => {
-  console.log("Getting acceleration pins with threshold:", accelerationThreshold);
+  logger.debug("Getting acceleration pins with threshold:", accelerationThreshold);
   const simLogs = await getLogs("sim");
   const realLogs = await getLogs("real");
   const allLogs = [...simLogs, ...realLogs];
@@ -72,7 +75,7 @@ export const getAccelerationPins = async (accelerationThreshold = 6) => {
     );
   });
 
-  console.log("Returning acceleration pins:", representativePins.length);
+  logger.debug("Returning acceleration pins:", representativePins.length);
   return representativePins;
 };
 
@@ -83,11 +86,11 @@ export const getAccelerationPins = async (accelerationThreshold = 6) => {
  * @returns {Promise<Array>} - Array of acceleration event pins for this trip
  */
 export const getAccelerationPinsForTrip = async (accelerationThreshold, trip) => {
-  console.log("Getting acceleration pins for trip:", trip.roadName);
-  console.log("Trip has logs:", trip.logs ? trip.logs.length : 0);
+  logger.debug("Getting acceleration pins for trip:", trip.roadName);
+  logger.debug("Trip has logs:", trip.logs ? trip.logs.length : 0);
 
   if (!trip || !trip.logs) {
-    console.log("No trip or no logs, returning empty array");
+    logger.debug("No trip or no logs, returning empty array");
     return [];
   }
 
@@ -108,7 +111,7 @@ export const getAccelerationPinsForTrip = async (accelerationThreshold, trip) =>
       timestamp: log.timestamp,
     }));
 
-  console.log("Found acceleration events:", allAccelerationEvents.length);
+  logger.verbose("Found acceleration events:", allAccelerationEvents.length);
 
   // Group events that are close together AND have similar acceleration values
   const groups = [];

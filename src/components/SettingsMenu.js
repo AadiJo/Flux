@@ -11,6 +11,7 @@ import {
   ScrollView,
   Dimensions,
   Animated,
+  Switch,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
@@ -23,6 +24,9 @@ import { migrateAllLogs } from "../utils/logMigration";
 import { scoreManager } from "../utils/scoreManager";
 import { clearCachedScore } from "../services/scoringService";
 import { BackgroundMonitoringCard } from "./BackgroundMonitoringCard";
+import { createLogger } from "../utils/debugLogger";
+
+const logger = createLogger('SettingsMenu');
 
 const SettingButton = ({ label, icon, onPress, theme }) => (
   <TouchableOpacity
@@ -54,7 +58,7 @@ export const SettingsMenu = ({
   updateSpeedingPinsFromLogs,
 }) => {
   const { theme, isDark } = useTheme();
-  const { speedingThreshold, updateSpeedingThreshold, scoreProvider, updateScoreProvider } = useSettings();
+  const { speedingThreshold, updateSpeedingThreshold, scoreProvider, updateScoreProvider, debugLogging, updateDebugLogging } = useSettings();
   const [showingModal, setShowingModal] = useState(visible);
   const [localThreshold, setLocalThreshold] = useState(speedingThreshold);
   const [localScoreProvider, setLocalScoreProvider] = useState(scoreProvider);
@@ -254,7 +258,7 @@ export const SettingsMenu = ({
       const allTrips = await getAllTrips();
       const realLogs = await getLogs("real");
 
-      console.log("=== COMPREHENSIVE DEBUG LOG INFO ===");
+      logger.debug("=== COMPREHENSIVE DEBUG LOG INFO ===");
       console.log("Real logs count:", realLogs?.length || 0);
       console.log("Real trips count:", realTrips?.length || 0);
       console.log("All trips count:", allTrips?.length || 0);
@@ -536,6 +540,21 @@ export const SettingsMenu = ({
                 </View>
               </View>
 
+              <View style={styles.settingOption}>
+                <Text style={[styles.settingLabel, { color: theme.text }]}>
+                  Debug Logging
+                </Text>
+                <Switch
+                  value={debugLogging}
+                  onValueChange={(value) => {
+                    updateDebugLogging(value);
+                    logger.userAction(`Debug logging ${value ? 'enabled' : 'disabled'}`);
+                  }}
+                  trackColor={{ false: theme.border, true: theme.primary + "40" }}
+                  thumbColor={debugLogging ? theme.primary : theme.textSecondary}
+                />
+              </View>
+
               <BackgroundMonitoringCard />
 
               <View style={styles.separator} />
@@ -597,7 +616,7 @@ export const SettingsMenu = ({
                     onClose();
                     // Navigate to score debug screen
                     // This would need navigation prop passed to SettingsMenu
-                    console.log("Score debug pressed - implement navigation");
+                    logger.info("Score debug pressed - implement navigation");
                   }}
                   theme={theme}
                 />

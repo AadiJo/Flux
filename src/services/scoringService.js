@@ -1,6 +1,9 @@
 import * as FileSystem from "expo-file-system/legacy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getAllTrips } from "./loggingService";
+import { createLogger } from "../utils/debugLogger";
+
+const logger = createLogger('ScoringService');
 
 const SAFETY_SCORE_KEY = "safety_score_data";
 const SCORE_FILE_URI = FileSystem.documentDirectory + "safety_score.json";
@@ -207,15 +210,15 @@ const calculateAccelerationMetrics = (trips) => {
   let harshAccelerationEvents = 0;
   let dataPointsWithAcceleration = 0;
 
-  console.log(`calculateAccelerationMetrics: Processing ${trips.length} trips`);
+  logger.debug(`calculateAccelerationMetrics: Processing ${trips.length} trips`);
 
   for (const trip of trips) {
     if (!trip.logs || trip.logs.length === 0) {
-      console.log(`Trip ${trip.id || "unknown"} has no logs for acceleration`);
+      logger.debug(`Trip ${trip.id || "unknown"} has no logs for acceleration`);
       continue;
     }
 
-    console.log(
+    logger.verbose(
       `Processing acceleration for trip ${trip.id || "unknown"} with ${
         trip.logs.length
       } logs`
@@ -259,17 +262,17 @@ const calculateAccelerationMetrics = (trips) => {
 
         // Log first few positive acceleration values for debugging
         if (positiveAccelerationCount <= 5) {
-          console.log(`Positive acceleration found: ${acceleration} mph/s`);
+          logger.verbose(`Positive acceleration found: ${acceleration} mph/s`);
         }
       }
     }
 
-    console.log(`Trip ${trip.id || "unknown"} acceleration summary:`);
-    console.log(`  - Total logs: ${logsSampled}`);
-    console.log(`  - Null/undefined acceleration: ${nullAccelerationCount}`);
-    console.log(`  - Zero acceleration: ${zeroAccelerationCount}`);
-    console.log(`  - Negative acceleration: ${negativeAccelerationCount}`);
-    console.log(`  - Positive acceleration: ${positiveAccelerationCount}`);
+    logger.debug(`Trip ${trip.id || "unknown"} acceleration summary:`);
+    logger.debug(`  - Total logs: ${logsSampled}`);
+    logger.debug(`  - Null/undefined acceleration: ${nullAccelerationCount}`);
+    logger.debug(`  - Zero acceleration: ${zeroAccelerationCount}`);
+    logger.debug(`  - Negative acceleration: ${negativeAccelerationCount}`);
+    logger.debug(`  - Positive acceleration: ${positiveAccelerationCount}`);
   }
 
   console.log(
@@ -309,7 +312,7 @@ const calculateBrakingMetrics = (trips) => {
   let harshBrakingEvents = 0;
   let dataPointsWithBraking = 0;
 
-  console.log(`calculateBrakingMetrics: Processing ${trips.length} trips`);
+  logger.debug(`calculateBrakingMetrics: Processing ${trips.length} trips`);
 
   for (const trip of trips) {
     if (!trip.logs || trip.logs.length === 0) {
@@ -721,7 +724,7 @@ export const getSafetyScore = async (
   try {
     // TEMPORARY: Force update to bypass cache for debugging
     forceUpdate = true;
-    console.log("FORCING SCORE UPDATE FOR DEBUGGING");
+    logger.warn("FORCING SCORE UPDATE FOR DEBUGGING");
 
     // Check if we need to update
     const needsUpdate = forceUpdate || (await shouldUpdateScore());
