@@ -49,11 +49,11 @@ export const getUnsafeTurningPinsForTrip = async (
   }
 
   // Also check for standalone UNSAFE_TURNING events
-  const unsafeTurningEvents = trip.logs.filter(log => log.type === "UNSAFE_TURNING");
+  const unsafeTurningEvents = trip.logs?.filter(log => log.type === "UNSAFE_TURNING") || [];
   
   for (const event of unsafeTurningEvents) {
     // Try to find a nearby regular log entry with location data
-    const nearbyLogWithLocation = trip.logs.find(log => {
+    const nearbyLogWithLocation = trip.logs?.find(log => {
       if (!log.location || log.type === "UNSAFE_TURNING" || log.type === "CONNECTION_MARKER") {
         return false;
       }

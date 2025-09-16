@@ -45,10 +45,10 @@ const getDistanceInFeet = (coord1, coord2) => {
   const lon2 = coord2.longitude;
 
   if (
-    lat1 === undefined ||
-    lon1 === undefined ||
-    lat2 === undefined ||
-    lon2 === undefined
+    lat1 == null ||
+    lon1 == null ||
+    lat2 == null ||
+    lon2 == null
   )
     return Infinity;
 

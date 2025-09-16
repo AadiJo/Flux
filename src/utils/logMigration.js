@@ -65,12 +65,9 @@ export const addAccelerationToLogs = async (logType) => {
       }
 
       // If acceleration already exists, skip
-      if (entry.acceleration !== null && entry.acceleration !== undefined) {
+      if (entry.acceleration != null) {
         // Update tracking variables for next calculation
-        if (
-          entry.obd2Data?.speed !== null &&
-          entry.obd2Data?.speed !== undefined
-        ) {
+        if (entry.obd2Data?.speed != null) {
           lastSpeed = entry.obd2Data.speed;
           lastTimestamp = new Date(entry.timestamp);
         }
@@ -83,10 +80,9 @@ export const addAccelerationToLogs = async (logType) => {
       const currentTimestamp = new Date(entry.timestamp);
 
       if (
-        currentSpeed !== null &&
-        currentSpeed !== undefined &&
-        lastSpeed !== null &&
-        lastTimestamp !== null
+        currentSpeed != null &&
+        lastSpeed != null &&
+        lastTimestamp != null
       ) {
         const timeDifference = (currentTimestamp - lastTimestamp) / 1000; // Convert to seconds
         if (timeDifference > 0) {
@@ -98,7 +94,7 @@ export const addAccelerationToLogs = async (logType) => {
       }
 
       // Update tracking variables
-      if (currentSpeed !== null && currentSpeed !== undefined) {
+      if (currentSpeed != null) {
         lastSpeed = currentSpeed;
         lastTimestamp = currentTimestamp;
       }

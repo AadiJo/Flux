@@ -231,7 +231,7 @@ const calculateAccelerationMetrics = (trips) => {
       const acceleration = log.acceleration;
       logsSampled++;
 
-      if (acceleration === null || acceleration === undefined) {
+      if (acceleration == null) {
         nullAccelerationCount++;
       } else if (acceleration === 0) {
         zeroAccelerationCount++;
@@ -328,7 +328,7 @@ const calculateBrakingMetrics = (trips) => {
     for (const log of trip.logs) {
       const acceleration = log.acceleration;
 
-      if (acceleration !== null && acceleration !== undefined && acceleration < 0) {
+      if (acceleration != null && acceleration < 0) {
         negativeBrakingCount++;
         const brakingMagnitude = Math.abs(acceleration); // Convert to positive for calculations
         
