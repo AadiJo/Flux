@@ -64,7 +64,7 @@ export const SettingsMenu = ({
   const [showScoreProviderDropdown, setShowScoreProviderDropdown] = useState(false);
   const [protocolId, setProtocolId] = useState(null);
 
-  const scoreProviderOptions = ["Flux"]; // Only Flux for now
+  const scoreProviderOptions = ["Flux", "Tesla"];
   const screenHeight = Dimensions.get("window").height;
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
