@@ -242,7 +242,6 @@ const AppContent = () => {
                   : "rgba(255, 255, 255, 0.5)",
               },
             ]}
-            experimentalBlurMethod="dimezis"
           />
           <View
             style={{
