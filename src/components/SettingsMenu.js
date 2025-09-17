@@ -11,7 +11,6 @@ import {
   ScrollView,
   Dimensions,
   Animated,
-  Switch,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
@@ -58,7 +57,7 @@ export const SettingsMenu = ({
   updateSpeedingPinsFromLogs,
 }) => {
   const { theme, isDark } = useTheme();
-  const { speedingThreshold, updateSpeedingThreshold, scoreProvider, updateScoreProvider, debugLogging, updateDebugLogging } = useSettings();
+  const { speedingThreshold, updateSpeedingThreshold, scoreProvider, updateScoreProvider } = useSettings();
   const [showingModal, setShowingModal] = useState(visible);
   const [localThreshold, setLocalThreshold] = useState(speedingThreshold);
   const [localScoreProvider, setLocalScoreProvider] = useState(scoreProvider);
@@ -538,21 +537,6 @@ export const SettingsMenu = ({
                     </View>
                   )}
                 </View>
-              </View>
-
-              <View style={styles.settingOption}>
-                <Text style={[styles.settingLabel, { color: theme.text }]}>
-                  Debug Logging
-                </Text>
-                <Switch
-                  value={debugLogging}
-                  onValueChange={(value) => {
-                    updateDebugLogging(value);
-                    logger.userAction(`Debug logging ${value ? 'enabled' : 'disabled'}`);
-                  }}
-                  trackColor={{ false: theme.border, true: theme.primary + "40" }}
-                  thumbColor={debugLogging ? theme.primary : theme.textSecondary}
-                />
               </View>
 
               <BackgroundMonitoringCard />
