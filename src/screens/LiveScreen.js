@@ -145,7 +145,8 @@ export const LiveScreen = ({
     if (isConnected) {
       logger.debug("Starting data polling...");
       fetchData();
-      dataInterval.current = setInterval(fetchData, 1000); // Poll every second    } else {
+      dataInterval.current = setInterval(fetchData, 1000); // Poll every second
+    } else {
       logger.debug("Stopping data polling...");
       if (dataInterval.current) {
         clearInterval(dataInterval.current);
@@ -535,7 +536,7 @@ export const LiveScreen = ({
         <View style={{ flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
           <View style={{ flexDirection: "row", alignItems: "center" }}>
             <Text style={{ color: theme.text, marginRight: 8 }}>
-              Simulate WiCAN
+              Simulate
             </Text>
             <Switch
               trackColor={{ false: "#767577", true: theme.primary }}

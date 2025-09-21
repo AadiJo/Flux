@@ -33,6 +33,7 @@ const getDefaultSpeedLimit = (highwayTag) => {
  */
 export const getSpeedLimit = async (latitude, longitude) => {
   if (!latitude || !longitude) {
+    console.log("getSpeedLimit: Invalid coordinates provided");
     return null;
   }
 
@@ -43,22 +44,43 @@ export const getSpeedLimit = async (latitude, longitude) => {
   `;
 
   const url = `${OVERPASS_API_URL}?data=${encodeURIComponent(query)}`;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
 
   try {
-    const response = await fetch(url);
+    console.log(`Fetching speed limit for coordinates: ${latitude}, ${longitude}`);
+    
+    const response = await fetch(url, {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
     const data = await response.json();
 
     if (data.elements && data.elements.length > 0) {
+      console.log(`Found ${data.elements.length} road elements`);
+      
       // First, check for an explicit maxspeed tag
       for (const element of data.elements) {
         if (element.tags && element.tags.maxspeed) {
           const maxspeed = element.tags.maxspeed;
+          console.log(`Found explicit speed limit: ${maxspeed}`);
+          
           if (maxspeed.toLowerCase().includes("mph")) {
-            return parseInt(maxspeed, 10);
+            const speed = parseInt(maxspeed, 10);
+            console.log(`Returning speed limit: ${speed} mph`);
+            return speed;
           }
           const speedKph = parseInt(maxspeed, 10);
           if (!isNaN(speedKph)) {
-            return getMphFromKph(speedKph);
+            const speedMph = getMphFromKph(speedKph);
+            console.log(`Converted ${speedKph} kph to ${speedMph} mph`);
+            return speedMph;
           }
         }
       }
@@ -68,14 +90,24 @@ export const getSpeedLimit = async (latitude, longitude) => {
         if (element.tags && element.tags.highway) {
           const fallbackSpeed = getDefaultSpeedLimit(element.tags.highway);
           if (fallbackSpeed) {
+            console.log(`Using fallback speed for highway type ${element.tags.highway}: ${fallbackSpeed} mph`);
             return fallbackSpeed;
           }
         }
       }
+    } else {
+      console.log("No road elements found for location");
     }
+    
+    console.log("No speed limit found for location");
     return null; // No road with a speed limit or fallback found
   } catch (error) {
-    console.error("Error fetching speed limit from Overpass:", error);
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.error("Speed limit fetch timed out");
+    } else {
+      console.error("Error fetching speed limit from Overpass:", error);
+    }
     return null;
   }
 };

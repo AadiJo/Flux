@@ -1,11 +1,20 @@
 const KPH_TO_MPH = 0.621371;
 
 export const fetchWicanData = async () => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
   try {
-    const response = await fetch("http://192.168.80.1/autopid_data");
+    const response = await fetch("http://192.168.80.1/autopid_data", {
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+    
     const json = await response.json();
 
     // Validate that we have at least one of the expected fields
@@ -25,6 +34,7 @@ export const fetchWicanData = async () => {
     };
     return newObd2Data;
   } catch (error) {
+    clearTimeout(timeoutId);
     console.log("WiCAN data fetch error:", error.message);
     throw error;
   }
