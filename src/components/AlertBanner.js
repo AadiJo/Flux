@@ -1,6 +1,15 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, Text, View } from "react-native";
+import React, { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring, 
+  withDelay,
+  withSequence,
+  runOnJS 
+} from 'react-native-reanimated';
 import { useTheme } from "../contexts/ThemeContext";
+import { SPRING_CONFIG } from "../utils/animationConfig";
 
 export const AlertBanner = ({
   visible,
@@ -10,28 +19,23 @@ export const AlertBanner = ({
   backgroundColor,
 }) => {
   const { theme } = useTheme();
-  const translateY = useRef(new Animated.Value(-100)).current;
+  const translateY = useSharedValue(-100);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   useEffect(() => {
     if (visible) {
-      // Show banner
-      Animated.sequence([
-        Animated.spring(translateY, {
-          toValue: 0,
-          useNativeDriver: true,
-          bounciness: 8,
-        }),
-        Animated.delay(duration),
-        Animated.spring(translateY, {
-          toValue: -100,
-          useNativeDriver: true,
-          bounciness: 8,
-        }),
-      ]).start(() => {
-        if (onHide) {
-          onHide();
-        }
-      });
+      // Show banner with sequence animation
+      translateY.value = withSequence(
+        withSpring(0, SPRING_CONFIG),
+        withDelay(duration, withSpring(-100, SPRING_CONFIG, () => {
+          if (onHide) {
+            runOnJS(onHide)();
+          }
+        }))
+      );
     }
   }, [visible, duration, onHide]);
 
@@ -43,9 +47,7 @@ export const AlertBanner = ({
     <Animated.View
       style={[
         styles.container,
-        {
-          transform: [{ translateY }],
-        },
+        animatedStyle,
       ]}
     >
       <View

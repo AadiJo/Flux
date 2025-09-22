@@ -7,7 +7,6 @@ import {
   Switch,
   Alert,
   Dimensions,
-  Animated,
   Platform,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";

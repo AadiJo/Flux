@@ -8,10 +8,15 @@ import {
   Dimensions,
   SafeAreaView,
   TouchableOpacity,
-  Animated,
-  Easing,
 } from "react-native";
 import MapView, { PROVIDER_DEFAULT, Marker, Callout } from "react-native-maps";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming,
+  withSpring,
+  runOnJS 
+} from 'react-native-reanimated';
 import { useTheme } from "../contexts/ThemeContext";
 import { useSettings } from "../contexts/SettingsContext";
 import { initializeLogging } from "../services/loggingService";
@@ -21,6 +26,7 @@ import { getBrakingPinsForTrip } from "../services/brakingService";
 import { getCombinedEventPinsForTrip } from "../services/combinedEventService";
 import { getUnsafeTurningPinsForTrip } from "../services/unsafeTurningService";
 import { TripSelectionModal } from "../components/TripSelectionModal";
+import { TIMING_CONFIG, SPRING_CONFIG } from "../utils/animationConfig";
 
 export const MapsScreen = ({
   appLocation,
@@ -43,7 +49,13 @@ export const MapsScreen = ({
   const [combinedEventPins, setCombinedEventPins] = useState([]);
 
   // Animation values
-  const slideAnim = useRef(new Animated.Value(0)).current;
+  const slideOpacity = useSharedValue(0);
+  const slideScale = useSharedValue(0.9);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: slideOpacity.value,
+    transform: [{ scale: slideScale.value }],
+  }));
 
   // Track first-run to avoid reacting to initial prop value when mounting
   const navPressFirstRender = useRef(true);
@@ -79,17 +91,13 @@ export const MapsScreen = ({
       if (animate) {
         // Small delay to ensure state updates are applied
         setTimeout(() => {
-          slideAnim.setValue(0);
-          Animated.timing(slideAnim, {
-            toValue: 1,
-            duration: 200,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }).start();
+          slideOpacity.value = withSpring(1, SPRING_CONFIG);
+          slideScale.value = withSpring(1, SPRING_CONFIG);
         }, 50);
       } else {
         // Instantly show without animation when restoring
-        slideAnim.setValue(1);
+        slideOpacity.value = 1;
+        slideScale.value = 1;
       }
     } catch (error) {
       console.error("Failed to load trip data:", error);
@@ -136,16 +144,15 @@ export const MapsScreen = ({
     setTripAccelerationPins([]);
     setTripBrakingPins([]);
     setCombinedEventPins([]);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 150,
-      easing: Easing.in(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      setSelectedTrip(null);
-      setShowTripSelection(true);
-      if (setHomeSelectedTrip) setHomeSelectedTrip(null);
+    
+    slideOpacity.value = withTiming(0, TIMING_CONFIG, () => {
+      runOnJS(() => {
+        setSelectedTrip(null);
+        setShowTripSelection(true);
+        if (setHomeSelectedTrip) setHomeSelectedTrip(null);
+      })();
     });
+    slideScale.value = withTiming(0.9, TIMING_CONFIG);
   };
 
   // Update map region state
@@ -295,17 +302,7 @@ export const MapsScreen = ({
     <Animated.View
       style={[
         { flex: 1 },
-        {
-          transform: [
-            {
-              translateX: slideAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [Dimensions.get("window").width, 0],
-              }),
-            },
-          ],
-          opacity: slideAnim,
-        },
+        animatedStyle,
       ]}
     >
       <StatusBar

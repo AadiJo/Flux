@@ -1,7 +1,18 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, StyleSheet } from "react-native";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedProps, 
+  withSpring,
+  interpolate,
+  useAnimatedReaction,
+  runOnJS
+} from 'react-native-reanimated';
 import { useTheme } from "../contexts/ThemeContext";
+import { SPRING_CONFIG } from "../utils/animationConfig";
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 export const CircularProgress = ({
   size = 250,
@@ -14,7 +25,41 @@ export const CircularProgress = ({
   const center = size / 2;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progressOffset = circumference - (progress / 100) * circumference;
+  
+  const animatedProgress = useSharedValue(0);
+  const animatedScore = useSharedValue(0);
+  const [displayScore, setDisplayScore] = useState(score || 0);
+
+  const animatedCircleProps = useAnimatedProps(() => {
+    const progressOffset = circumference - (animatedProgress.value / 100) * circumference;
+    return {
+      strokeDashoffset: progressOffset,
+    };
+  });
+
+  // Use useAnimatedReaction to update the display score
+  useAnimatedReaction(
+    () => {
+      const targetScore = score || 0;
+      return interpolate(
+        animatedScore.value,
+        [0, 1],
+        [0, targetScore]
+      );
+    },
+    (currentScore) => {
+      runOnJS(setDisplayScore)(Math.round(currentScore));
+    }
+  );
+
+  useEffect(() => {
+    console.log('CircularProgress: progress =', progress, 'score =', score);
+    if (score !== undefined && score !== null) {
+      setDisplayScore(score);
+    }
+    animatedProgress.value = withSpring(progress, SPRING_CONFIG);
+    animatedScore.value = withSpring(1, SPRING_CONFIG);
+  }, [progress, score]);
 
   return (
     <View style={styles.container}>
@@ -31,8 +76,8 @@ export const CircularProgress = ({
           transform={`rotate(-90 ${center} ${center})`}
         />
 
-        {/* Progress Circle */}
-        <Circle
+        {/* Animated Progress Circle */}
+        <AnimatedCircle
           cx={center}
           cy={center}
           r={radius}
@@ -40,9 +85,9 @@ export const CircularProgress = ({
           strokeWidth={strokeWidth}
           fill="none"
           strokeDasharray={circumference}
-          strokeDashoffset={progressOffset}
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
+          animatedProps={animatedCircleProps}
         />
 
         {/* Score Text */}
@@ -54,7 +99,7 @@ export const CircularProgress = ({
           fill={theme.text}
           textAnchor="middle"
         >
-          {score}
+          {displayScore}
         </SvgText>
       </Svg>
     </View>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Animated } from "react-native";
+import { useSharedValue, withTiming } from 'react-native-reanimated';
 import { MAX_SPEED_DATA_POINTS } from "../constants/chartConfig";
+import { TIMING_CONFIG } from "../utils/animationConfig";
 
 export const useSimulation = (isActive = true) => {
   const [obd2Data, setObd2Data] = useState({
@@ -13,16 +14,12 @@ export const useSimulation = (isActive = true) => {
   });
   const [speedHistory, setSpeedHistory] = useState([]);
   const simulationInterval = useRef(null);
-  const chartAnimationValue = useRef(new Animated.Value(0)).current;
+  const chartAnimationValue = useSharedValue(0);
 
   useEffect(() => {
     if (isActive) {
       setSpeedHistory([]);
-      Animated.timing(chartAnimationValue, {
-        toValue: 0,
-        duration: 0,
-        useNativeDriver: true,
-      }).start();
+      chartAnimationValue.value = 0;
 
       const interval = setInterval(() => {
         const newSpeed = Math.random() * 120;
@@ -43,11 +40,7 @@ export const useSimulation = (isActive = true) => {
         });
       }, 250);
 
-      Animated.timing(chartAnimationValue, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }).start();
+      chartAnimationValue.value = withTiming(1, TIMING_CONFIG);
 
       simulationInterval.current = interval;
 

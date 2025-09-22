@@ -10,8 +10,13 @@ import {
   FlatList,
   ScrollView,
   Dimensions,
-  Animated,
 } from "react-native";
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming,
+  runOnJS 
+} from 'react-native-reanimated';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../contexts/ThemeContext";
 import { useSettings } from "../contexts/SettingsContext";
@@ -24,6 +29,7 @@ import { scoreManager } from "../utils/scoreManager";
 import { clearCachedScore } from "../services/scoringService";
 import { BackgroundMonitoringCard } from "./BackgroundMonitoringCard";
 import { createLogger } from "../utils/debugLogger";
+import { TIMING_CONFIG } from "../utils/animationConfig";
 
 const logger = createLogger('SettingsMenu');
 
@@ -67,7 +73,16 @@ export const SettingsMenu = ({
   const scoreProviderOptions = ["Flux", "Tesla"];
   const screenHeight = Dimensions.get("window").height;
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const fadeOpacity = useSharedValue(0);
+  const slideTransform = useSharedValue(50);
+
+  const animatedBackgroundStyle = useAnimatedStyle(() => ({
+    opacity: fadeOpacity.value,
+  }));
+
+  const animatedMenuStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: slideTransform.value }],
+  }));
 
   const simLogUri = FileSystem.documentDirectory + "sim_session_logs.jsonl";
   const realLogUri = FileSystem.documentDirectory + "real_session_logs.jsonl";
@@ -78,13 +93,9 @@ export const SettingsMenu = ({
       setLocalScoreProvider(scoreProvider);
       setShowingModal(true);
       
-      // Reset and start fade in animation for background
-      fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      // Start fade in and slide up animations
+      fadeOpacity.value = withTiming(1, TIMING_CONFIG);
+      slideTransform.value = withTiming(0, TIMING_CONFIG);
 
       // Fetch the stored protocol when menu opens
       const fetchProtocol = async () => {
@@ -98,16 +109,13 @@ export const SettingsMenu = ({
       };
       fetchProtocol();
     } else if (showingModal) {
-      // Fade out background before closing
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => {
-        setShowingModal(false);
+      // Fade out and slide down before closing
+      fadeOpacity.value = withTiming(0, TIMING_CONFIG);
+      slideTransform.value = withTiming(50, TIMING_CONFIG, () => {
+        runOnJS(setShowingModal)(false);
       });
     }
-  }, [visible, showingModal, speedingThreshold, scoreProvider, fadeAnim]);
+  }, [visible, showingModal, speedingThreshold, scoreProvider]);
 
   const handleExport = async (logType) => {
     const uri = logType === "sim" ? simLogUri : realLogUri;
@@ -385,13 +393,13 @@ export const SettingsMenu = ({
       animationType="none"
       onRequestClose={handleClose}
     >
-      <Animated.View 
+      <Animated.View
         style={[
           styles.modalOverlay, 
           { 
             backgroundColor: "rgba(0, 0, 0, 0.7)",
-            opacity: fadeAnim 
-          }
+          },
+          animatedBackgroundStyle
         ]}
       >
         <TouchableOpacity
@@ -407,15 +415,8 @@ export const SettingsMenu = ({
             styles.menu,
             {
               backgroundColor: theme.card,
-              transform: [
-                {
-                  translateY: fadeAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [50, 0],
-                  }),
-                },
-              ],
             },
+            animatedMenuStyle,
           ]}
         >
           <ScrollView 

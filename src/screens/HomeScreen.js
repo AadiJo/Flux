@@ -52,6 +52,8 @@ export const HomeScreen = ({
   const [badEventsCounts, setBadEventsCounts] = useState([]);
   const safetyScore = scoreLoading ? null : overallScore;
 
+  console.log('HomeScreen: scoreLoading =', scoreLoading, 'overallScore =', overallScore, 'safetyScore =', safetyScore);
+
   const handleScoreDetailsOpen = (pageIndex = 0) => {
     setScoreDetailsInitialPage(pageIndex);
     setShowScoreDetails(true);
